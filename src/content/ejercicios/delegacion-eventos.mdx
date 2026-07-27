@@ -1,0 +1,119 @@
+---
+titulo: "Un listener por elemento"
+orden: 6
+categoria: eventos
+resumen: "N botones, N listeners, memoria que crece con la lista. Un solo listener en el padre resuelve todo."
+conceptos: ["delegación", "burbujeo", "closest"]
+dificultad: 1
+minutos: 7
+quiz:
+  - pregunta: "¿Qué problema hay con registrar un listener por cada botón?"
+    opciones:
+      - "Que el DOM no permite más de 100 listeners activos."
+      - "Que cada listener ocupa memoria y hay que registrarlos otra vez cuando se añaden botones nuevos dinámicamente."
+      - "Que `forEach` no soporta callbacks asíncronos."
+      - "Que `addEventListener` se vuelve lento después del quinto registro."
+      - "Que los listeners no funcionan en `querySelectorAll` sin `for` clásico."
+    correcta: 1
+  - pregunta: "¿En qué consiste la delegación de eventos?"
+    opciones:
+      - "En emitir eventos desde JavaScript hacia el HTML manualmente."
+      - "En registrar un único listener en un contenedor padre y usar el burbujeo del evento para identificar qué hijo lo disparó."
+      - "En delegar a un service worker el manejo de eventos del DOM."
+      - "En agrupar listeners en un array y ejecutarlos secuencialmente."
+      - "En usar `dispatchEvent` para reenviar eventos entre elementos."
+    correcta: 1
+  - pregunta: '¿Por qué usar `e.target.closest(".add-to-cart")` en lugar de comparar `e.target` directamente?'
+    opciones:
+      - "Porque `closest` es más rápido que `matches`."
+      - "Porque si el botón contiene otros elementos (un icono, un span), `e.target` puede ser el hijo interno y no el botón; `closest` sube hasta el ancestro que coincide."
+      - "Porque `e.target` es `undefined` en eventos delegados."
+      - "Porque `closest` incluye los eventos de teclado además de los de ratón."
+      - "Porque `closest` normaliza mayúsculas y minúsculas en las clases CSS."
+    correcta: 1
+  - pregunta: "¿Qué es el burbujeo de eventos?"
+    opciones:
+      - "Un efecto visual de las animaciones CSS."
+      - "El mecanismo por el que un evento disparado en un elemento sube por la cadena de ancestros hasta document, permitiendo que un padre lo intercepte."
+      - "Un patrón para agrupar eventos redundantes."
+      - "La cola de eventos pendientes del event loop."
+      - "El proceso por el que los frameworks agrupan renders en batch."
+    correcta: 1
+  - pregunta: "En el patrón de delegación, ¿qué hace la guard clause `if (boton)`?"
+    opciones:
+      - "Comprueba que el botón está en pantalla antes de responder."
+      - "Comprueba que el click ocurrió realmente sobre un elemento con la clase esperada, ignorando clicks en el resto del contenedor."
+      - "Cachea la referencia al botón para futuras invocaciones."
+      - "Impide que el evento siga burbujeando hacia arriba."
+      - "Espera a que el DOM termine de renderizar antes de actuar."
+    correcta: 1
+---
+
+import Solucion from "../../components/Solucion.astro";
+
+## El problema
+
+Una lista de productos con un botón "añadir al carrito" en cada uno.
+Registras un listener por botón. Funciona. Pero luego el catálogo crece
+a 200 productos, cada uno con su listener; y cuando llegan productos
+nuevos por scroll infinito, esos no tienen listener y no responden
+hasta que vuelvas a registrar todos. La memoria y el mantenimiento
+crecen con la lista.
+
+Hay un patrón que resuelve las dos cosas a la vez, aprovechando algo
+que el DOM hace por defecto: los eventos burbujean.
+
+## El código roto
+
+```javascript
+const botones = document.querySelectorAll(".add-to-cart");
+
+botones.forEach((boton) => {
+  boton.addEventListener("click", (e) => {
+    const id = e.target.dataset.id;
+    console.log("Añadido al carrito:", id);
+  });
+});
+```
+
+## Las pistas
+
+- Un solo listener en el contenedor padre.
+- `e.target.closest(".add-to-cart")` para saber qué se pulsó.
+- Guard clause para ignorar clicks fuera de botón.
+
+<Solucion>
+
+```javascript
+const listaArticulos = document.getElementById("lista-articulos");
+
+listaArticulos.addEventListener("click", (e) => {
+  const boton = e.target.closest(".add-to-cart");
+
+  if (boton) {
+    const id = boton.dataset.id;
+    console.log("Añadido al carrito:", id);
+  }
+});
+```
+
+El patrón se llama **delegación de eventos**. Un evento `click` en el
+DOM burbujea: sube desde el elemento pulsado hasta `document`, pasando
+por cada ancestro. Un listener en el contenedor padre recibe todos los
+clicks de sus descendientes, y con `e.target` sabe cuál fue el
+elemento original.
+
+`closest(".add-to-cart")` es la pieza clave. `e.target` es exactamente
+el nodo que recibió el click; si tu botón contiene un `<svg>` de icono,
+el usuario pulsa sobre el icono y `e.target` es el `<svg>`, no el botón.
+`closest` sube por la cadena hasta encontrar un ancestro (o el mismo
+elemento) que cumpla el selector. Si no lo encuentra devuelve `null`,
+y por eso la guard clause `if (boton)` ignora los clicks que caen
+fuera de un botón.
+
+Dos ganancias directas: un solo listener en memoria en vez de N, y los
+productos que se añadan dinámicamente después funcionan sin volver a
+registrar nada. Es el patrón por defecto para cualquier UI con listas
+o grids interactivos.
+
+</Solucion>

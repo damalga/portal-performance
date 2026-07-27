@@ -11,6 +11,10 @@
   --papel: #f5f5f5;
   --publi: rgba(255, 255, 255, 0.04);
 
+  /* Estados (solo para feedback correcto/incorrecto de UI) */
+  --exito: #007a3d;
+  --error: #c0281f;
+
   /* Roles semánticos (alias, no color nuevo) */
   --fondo: var(--papel);
   --texto: var(--tinta);

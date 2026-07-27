@@ -1,10 +1,71 @@
 ---
+import { getCollection } from "astro:content";
 import Base from "../layouts/Base.astro";
+import Nav from "../components/Nav.astro";
+import ArticuloCard from "../components/ArticuloCard.astro";
+
+const ejercicios = (await getCollection("ejercicios")).sort((a, b) => a.data.orden - b.data.orden);
 ---
 
-<Base titulo="Portal Performance">
-  <main>
-    <h1>Portal Performance</h1>
-    <p>Andamiaje inicial. En construcción.</p>
+<Base
+  titulo="Portal Performance"
+  descripcion="Ejercicios de rendimiento frontend. Un problema real, la solución, y una comprobación."
+>
+  <Nav />
+
+  <main class="home">
+    <section class="hero">
+      <h1>Ejercicios de rendimiento frontend</h1>
+      <p>
+        Cada artículo enseña un patrón real, con el código roto delante y la solución detrás de un
+        desplegable. El sitio corre sobre las mismas técnicas que explica.
+      </p>
+    </section>
+
+    <section class="listado" aria-label="Ejercicios">
+      {
+        ejercicios.map((e) => (
+          <ArticuloCard
+            titulo={e.data.titulo}
+            slug={e.id}
+            resumen={e.data.resumen}
+            categoria={e.data.categoria}
+          />
+        ))
+      }
+    </section>
   </main>
 </Base>
+
+<style>
+  .home {
+    max-width: 76rem;
+    margin: 0 auto;
+    padding: var(--esp-2xl) var(--esp-lg);
+  }
+
+  .hero {
+    max-width: var(--col-prosa);
+    margin-bottom: var(--esp-2xl);
+  }
+
+  .hero h1 {
+    font-family: var(--fuente-display);
+    font-size: var(--paso-6);
+    line-height: var(--lh-tight);
+    letter-spacing: -0.03em;
+    margin: 0 0 var(--esp-md);
+  }
+
+  .hero p {
+    font-size: var(--paso-1);
+    line-height: var(--lh-largo);
+    max-width: none;
+  }
+
+  .listado {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--esp-lg);
+  }
+</style>

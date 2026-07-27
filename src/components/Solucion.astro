@@ -1,0 +1,67 @@
+---
+interface Props {
+  titulo?: string;
+}
+
+const { titulo = "Ver la solución" } = Astro.props;
+---
+
+<details class="solucion">
+  <summary>{titulo}</summary>
+  <div class="cuerpo">
+    <slot />
+  </div>
+</details>
+
+<style>
+  .solucion {
+    border: 2px solid var(--acento);
+    border-radius: var(--radio-md);
+    padding: 0;
+    margin: var(--esp-lg) 0;
+    background: var(--fondo);
+  }
+
+  summary {
+    cursor: pointer;
+    padding: var(--esp-md) var(--esp-lg);
+    font-family: var(--fuente-display);
+    font-weight: 700;
+    font-size: var(--paso-1);
+    color: var(--acento);
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--esp-sm);
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  summary::after {
+    content: "▸";
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-2);
+    transition: transform 150ms ease-out;
+  }
+
+  .solucion[open] summary::after {
+    transform: rotate(90deg);
+  }
+
+  summary:hover {
+    background: var(--destacado);
+    color: var(--tinta);
+  }
+
+  .cuerpo {
+    padding: 0 var(--esp-lg) var(--esp-lg);
+    border-top: 1px solid var(--acento);
+  }
+
+  .cuerpo :global(pre) {
+    margin: var(--esp-md) 0;
+  }
+</style>

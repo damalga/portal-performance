@@ -1,0 +1,60 @@
+---
+interface Props {
+  titulo: string;
+  categoria?: "dom" | "eventos" | "datos" | "metricas";
+  compacto?: boolean;
+}
+
+const { titulo, categoria, compacto = false } = Astro.props;
+---
+
+<figure class:list={["portada", { compacto }]} aria-hidden="true">
+  <span class="titulo">{titulo}</span>
+  {categoria && <span class="categoria">{categoria}</span>}
+</figure>
+
+<style>
+  .portada {
+    position: relative;
+    display: grid;
+    place-items: center;
+    aspect-ratio: 16 / 9;
+    background: var(--tinta);
+    color: var(--papel);
+    overflow: hidden;
+    margin: 0;
+    padding: var(--esp-lg);
+  }
+
+  .portada.compacto {
+    aspect-ratio: 4 / 3;
+    padding: var(--esp-md);
+  }
+
+  .titulo {
+    font-family: var(--fuente-display);
+    font-weight: 700;
+    font-size: var(--paso-5);
+    line-height: var(--lh-corto);
+    text-wrap: balance;
+    max-width: 18ch;
+  }
+
+  .portada.compacto .titulo {
+    font-size: var(--paso-3);
+  }
+
+  .categoria {
+    position: absolute;
+    left: var(--esp-md);
+    bottom: var(--esp-md);
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-000);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: var(--esp-2xs) var(--esp-xs);
+    background: var(--papel);
+    color: var(--tinta);
+    border-radius: var(--radio-sm);
+  }
+</style>

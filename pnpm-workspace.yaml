@@ -1,7 +1,10 @@
 allowBuilds:
+  "@parcel/watcher": true
   esbuild: true
 minimumReleaseAgeExclude:
   - astro@7.1.4
   - "@astrojs/preact"
   - "@preact/signals"
   - preact
+  - "@astrojs/mdx@7.0.4"
+  - sass

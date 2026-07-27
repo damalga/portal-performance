@@ -1,0 +1,123 @@
+---
+titulo: "Insertar en el DOM dentro de un bucle"
+orden: 1
+categoria: dom
+resumen: "Meter 500 nodos uno a uno provoca 500 recálculos. Cómo bajar a uno."
+conceptos: ["reflow", "batching", "DocumentFragment"]
+dificultad: 1
+minutos: 6
+quiz:
+  - pregunta: "¿Por qué es lento insertar 500 nodos con appendChild dentro de un bucle?"
+    opciones:
+      - "Porque el bucle for es más lento que forEach o map en los navegadores modernos."
+      - "Porque cada modificación al DOM invalida el layout y puede provocar un reflow del árbol de renderizado."
+      - "Porque createElement reserva memoria y el garbage collector se dispara por cada nodo."
+      - "Porque appendChild es asíncrono y el navegador espera que resuelva cada promesa antes de continuar."
+      - "Porque textContent con concatenación de strings tiene coste cuadrático a partir de cierto tamaño."
+    correcta: 1
+  - pregunta: "¿Qué hace un DocumentFragment y por qué ayuda aquí?"
+    opciones:
+      - "Es un contenedor invisible en memoria que puede acumular nodos y volcarlos al DOM en una única inserción."
+      - "Es un cache de estilos que el navegador comparte entre nodos del mismo tipo."
+      - "Es un modo de rendering paralelo que descarga el trabajo al compositor thread."
+      - "Es un objeto que registra automáticamente los cambios al DOM para deshacerlos si fallan."
+      - "Es una promesa que resuelve cuando el navegador termina de pintar."
+    correcta: 0
+  - pregunta: "Al hacer `container.append(...items)` con 500 elementos, ¿cuántos reflows fuerza?"
+    opciones:
+      - "500, uno por elemento del spread."
+      - "Cero: append no fuerza reflow, solo lo marca como necesario."
+      - "Uno solo: es una única operación desde el punto de vista del layout."
+      - "Depende del navegador y no se puede predecir."
+      - "Dos: uno al principio y otro al final del batch."
+    correcta: 2
+  - pregunta: "¿Cuál de estas variantes también sirve para bajar los 500 reflows a uno?"
+    opciones:
+      - "Concatenar strings en una variable y asignarla a `container.innerHTML` al final."
+      - "Envolver el bucle en `queueMicrotask` para que el navegador batch por su cuenta."
+      - "Cambiar `appendChild` por `prepend` en cada iteración."
+      - "Añadir `container.style.display = 'none'` antes del bucle y devolvérselo al final."
+      - "Convertir el bucle en `for...of` en vez de `for` clásico."
+    correcta: 0
+  - pregunta: "¿Qué es exactamente un “reflow”?"
+    opciones:
+      - "El proceso por el que el navegador recalcula posiciones y tamaños de los elementos afectados por un cambio."
+      - "Un evento que el DOM emite cuando termina de dibujar."
+      - "El repintado de píxeles cuando cambia un color, sin tocar la geometría."
+      - "Una llamada a la GPU para componer las capas visibles."
+      - "El recolector de basura ejecutándose sobre nodos huérfanos."
+    correcta: 0
+---
+
+import Solucion from "../../components/Solucion.astro";
+
+## El problema
+
+Necesitas pintar una lista de 500 elementos. Escribes lo obvio: un bucle
+con `createElement` y `appendChild`. Funciona, pero se nota lento en móvil,
+y el navegador marca la tarea como problemática en el perfilador.
+
+El motivo no es el bucle. Es que cada `appendChild` es una modificación al
+árbol del DOM, y el navegador tiene que estar preparado en cualquier
+momento para responder a preguntas sobre layout (`offsetHeight`,
+`getBoundingClientRect`). Aunque en la práctica intenta agrupar reflows,
+un patrón de 500 mutaciones seguidas es exactamente lo que le impide hacerlo.
+
+## El código roto
+
+```javascript
+const container = document.getElementById("list");
+
+for (let i = 0; i < 500; i++) {
+  const item = document.createElement("div");
+  item.textContent = "Elemento " + i;
+  container.appendChild(item);
+}
+```
+
+## Las pistas
+
+- Los nodos no tienen por qué vivir en el DOM mientras los construyes.
+- Buscas una única operación al final del bucle, no 500.
+- `DocumentFragment` existe exactamente para esto.
+
+<Solucion>
+
+```javascript
+const container = document.getElementById("list");
+const fragment = document.createDocumentFragment();
+
+for (let i = 0; i < 500; i++) {
+  const item = document.createElement("div");
+  item.textContent = "Elemento " + i;
+  fragment.appendChild(item);
+}
+
+container.appendChild(fragment);
+```
+
+Un `DocumentFragment` es un contenedor ligero que no forma parte del
+documento visible. Puedes montar dentro toda la lista sin que el navegador
+reflowee nada, y cuando insertas el fragmento en el contenedor real, el
+DOM ve una sola inserción, no 500.
+
+También sirve un array + spread, que expresa la misma idea de otra manera:
+
+```javascript
+const container = document.getElementById("list");
+const items = [];
+
+for (let i = 0; i < 500; i++) {
+  const item = document.createElement("div");
+  item.textContent = "Elemento " + i;
+  items.push(item);
+}
+
+container.append(...items);
+```
+
+El `DocumentFragment` es el patrón canónico de la plataforma; el array +
+spread lee bien y no necesita conocerlo. Cualquiera vale, siempre que se
+pase de N mutaciones a una.
+
+</Solucion>

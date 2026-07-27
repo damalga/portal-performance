@@ -1,0 +1,160 @@
+---
+titulo: "Scroll infinito"
+orden: 8
+categoria: eventos
+resumen: "Un listener de scroll, un fetch por disparo, y un innerHTML que reparsea todo. Tres problemas, una solución con IntersectionObserver."
+conceptos: ["IntersectionObserver", "rootMargin", "condición de carrera", "insertAdjacentHTML"]
+dificultad: 3
+minutos: 12
+quiz:
+  - pregunta: "¿Qué ventaja tiene IntersectionObserver frente a un listener de scroll para detectar si un centinela está en pantalla?"
+    opciones:
+      - "Es más rápido porque usa un worker."
+      - "El navegador optimiza la detección internamente y avisa solo cuando cambia el estado de visibilidad, evitando cientos de disparos por segundo."
+      - "Funciona en más navegadores que scroll."
+      - "Permite escuchar en varios elementos con un solo `addEventListener`."
+      - "Es un API síncrono, mientras que scroll es asíncrono."
+    correcta: 1
+  - pregunta: "¿Para qué sirve `rootMargin` en IntersectionObserver?"
+    opciones:
+      - "Para forzar un margen CSS al elemento observado."
+      - "Para ampliar (o reducir) el área efectiva del viewport para la detección, disparando el observer antes de que el centinela sea visible."
+      - "Para limitar cuántas veces el observer puede dispararse."
+      - "Para ignorar los cambios de tamaño de ventana."
+      - "Para controlar el z-index del elemento."
+    correcta: 1
+  - pregunta: "¿Por qué hace falta la bandera `cargando` aunque uses IntersectionObserver?"
+    opciones:
+      - "No hace falta, IntersectionObserver ya evita disparos concurrentes."
+      - "Porque mientras la primera petición está en vuelo el usuario puede seguir haciendo scroll y el observer disparar de nuevo, lanzando peticiones duplicadas para la misma página."
+      - "Porque IntersectionObserver no funciona en Safari sin ella."
+      - "Para forzar al navegador a pausar el scroll durante el fetch."
+      - "Para que `siguientePagina` se incremente correctamente."
+    correcta: 1
+  - pregunta: "¿Por qué bajar la bandera `cargando` en `.finally()` y no en `.then()`?"
+    opciones:
+      - "Porque `.then` no acepta funciones que modifiquen variables externas."
+      - "Porque si la petición falla y solo la bajas en `.then`, la bandera queda a `true` y el scroll infinito se rompe: nunca vuelve a cargar."
+      - "Porque `.finally` se ejecuta antes que `.then` y llega a tiempo."
+      - "Porque `.finally` cachea el resultado y `.then` no."
+      - "Porque `.then` solo funciona con promesas resueltas por `fetch`."
+    correcta: 1
+  - pregunta: '¿Por qué `insertAdjacentHTML("beforeend", ...)` es mejor que `innerHTML += ...` para añadir contenido al final?'
+    opciones:
+      - "Porque `insertAdjacentHTML` es más nuevo y mejor optimizado en general."
+      - "Porque `insertAdjacentHTML` parsea solo el fragmento nuevo, mientras que `+=` serializa todo el contenido existente, lo concatena y lo reparsea entero."
+      - "Porque `+=` no funciona con etiquetas `<article>`."
+      - "Porque `insertAdjacentHTML` sanitiza automáticamente contra XSS."
+      - "Porque `+=` provoca layout thrashing y `insertAdjacentHTML` no."
+    correcta: 1
+---
+
+import Solucion from "../../components/Solucion.astro";
+
+## El problema
+
+Scroll infinito de artículos. El código roto es un compendio: un
+listener de scroll que se dispara sin parar, un fetch por disparo (sin
+bandera que evite duplicados), y un `innerHTML +=` que reparsea la
+lista entera cada vez que llega una página nueva.
+
+Los tres problemas se resuelven con tres piezas distintas, y merece
+la pena verlos por separado.
+
+## El código roto
+
+```javascript
+const lista = document.getElementById("articulos");
+const centinela = document.getElementById("cargar-mas");
+let siguientePagina = 2;
+
+window.addEventListener("scroll", () => {
+  const rect = centinela.getBoundingClientRect();
+
+  if (rect.top < window.innerHeight) {
+    fetch("/api/articulos?pagina=" + siguientePagina)
+      .then((res) => res.json())
+      .then((articulos) => {
+        lista.innerHTML += articulos.map((a) => `<article>${a.titulo}</article>`).join("");
+        siguientePagina++;
+      });
+  }
+});
+```
+
+## Las pistas
+
+- `IntersectionObserver` avisa cuando un elemento cambia de estado de visibilidad; no necesitas escuchar scroll para saber si el centinela está cerca.
+- Una bandera `cargando` que se levanta al empezar el fetch y se baja al terminar evita peticiones duplicadas.
+- `insertAdjacentHTML("beforeend", ...)` inserta al final sin reparsear lo que ya hay.
+
+<Solucion>
+
+```javascript
+const lista = document.getElementById("articulos");
+const centinela = document.getElementById("cargar-mas");
+let siguientePagina = 2;
+
+const observer = new IntersectionObserver(
+  ([ele]) => {
+    if (!ele.isIntersecting) return;
+    if (cargando) return;
+
+    cargando = true;
+
+    fetch("/api/articulos?pagina=" + siguientePagina)
+      .then((res) => res.json())
+      .then((articulos) => {
+        lista.insertAdjacentHTML(
+          "beforeend",
+          articulos.map((a) => `<article>${a.titulo}</article>`).join(""),
+        );
+        siguientePagina++;
+      })
+      .finally(() => {
+        cargando = false;
+      });
+  },
+  { rootMargin: "300px" },
+);
+
+observer.observe(centinela);
+```
+
+Tres piezas:
+
+**IntersectionObserver** con `rootMargin: "300px"` observa un elemento
+centinela colocado al final de la lista. En vez de escuchar `scroll`
+(que se dispara sin parar), el observer avisa solo cuando el estado de
+visibilidad del centinela cambia. El `rootMargin` expande el área
+efectiva del viewport 300px por debajo, así que empezamos a cargar la
+página siguiente antes de que el usuario llegue al fondo — cuando llega,
+los artículos ya están.
+
+**Bandera `cargando`**. IntersectionObserver reduce los disparos, pero
+no los elimina: si el usuario hace scroll con el centinela en pantalla,
+el observer puede volver a dispararse mientras la primera petición
+todavía está en vuelo. La bandera bloquea peticiones concurrentes para
+la misma página. Se sube al empezar, se baja en `.finally()`. En
+`.finally` y no en `.then` porque si la petición falla (red caída,
+500 del servidor) y la bandera queda a `true`, el scroll infinito
+se rompe para siempre. `.finally` cubre éxito y fallo, que es lo que
+quieres.
+
+**`insertAdjacentHTML("beforeend", ...)`** añade el HTML nuevo al
+final del contenedor sin tocar lo que ya hay. `innerHTML += ...` es
+peor de lo que parece: para calcular el nuevo valor, el navegador
+serializa el contenido actual del nodo, lo concatena con el nuevo
+trozo, y parsea el resultado entero de vuelta. En una lista con 100
+artículos, cargar la página 6 supone re-parsear los 500 anteriores
+para pintar los 5 nuevos. `insertAdjacentHTML` parsea solo el
+fragmento nuevo.
+
+Este es el script que gobierna el scroll infinito real de la home.
+
+> Nota del proyecto: el fragmento fuente omite la declaración de
+> `cargando`. En estricto rompería; en no-estricto se convierte en
+> global implícita. En la implementación real la declaramos como
+> `let cargando = false;` antes del observer.
+
+</Solucion>

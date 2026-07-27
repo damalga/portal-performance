@@ -1,0 +1,160 @@
+---
+titulo: "Filtrar en cada tecla"
+orden: 3
+categoria: eventos
+resumen: "El buscador filtra por pulsación y repinta con innerHTML sumado. Dos problemas distintos en el mismo listener."
+conceptos: ["debounce", "innerHTML", "DocumentFragment"]
+dificultad: 2
+minutos: 9
+quiz:
+  - pregunta: '¿Qué problema tiene `lista.innerHTML += "<div>" + p + "</div>"` dentro de un bucle?'
+    opciones:
+      - "Que no es válido en modo estricto, el navegador lo bloquea."
+      - "Que cada `+=` fuerza al navegador a parsear todo el HTML acumulado y reconstruir todos los nodos hijos desde cero."
+      - "Que `innerHTML` no acepta concatenación, hay que usar `insertAdjacentHTML`."
+      - "Que el operador `+` con strings es de tiempo cuadrático en JavaScript."
+      - "Que la asignación se hace en un microtask y no se ve hasta el siguiente frame."
+    correcta: 1
+  - pregunta: "¿Qué hace exactamente el patrón de debounce con `setTimeout` y `clearTimeout`?"
+    opciones:
+      - "Ejecuta la función a intervalos regulares mientras el usuario teclea."
+      - "Cancela la ejecución pendiente cada vez que llega un evento nuevo, y solo dispara cuando pasa un tiempo sin actividad."
+      - "Retrasa el primer disparo un tiempo fijo y luego deja pasar el resto."
+      - "Ejecuta la función en un worker para no bloquear el hilo principal."
+      - "Agrupa las llamadas en batch y las ejecuta al terminar el frame."
+    correcta: 1
+  - pregunta: "¿Por qué la variable `timeout` tiene que vivir fuera del listener?"
+    opciones:
+      - "Para que sea global y accesible desde otros módulos."
+      - "Porque `setTimeout` solo funciona con variables globales."
+      - "Para que `clearTimeout` de una pulsación pueda cancelar el temporizador de la anterior; si viviera dentro, cada llamada crearía uno nuevo y perdería la referencia."
+      - "Porque `let` dentro del listener no es válido en JavaScript moderno."
+      - "Por hoisting: `var` no funciona en callbacks pero `let` sí, y hay que sacarlo."
+    correcta: 2
+  - pregunta: "¿Cuál es la diferencia entre debounce y throttle?"
+    opciones:
+      - "Son sinónimos, dos nombres del mismo patrón."
+      - "Debounce espera a que pare la actividad para disparar una vez; throttle deja pasar a ritmo fijo mientras hay actividad."
+      - "Throttle usa `setTimeout`, debounce usa `requestAnimationFrame`."
+      - "Debounce funciona con eventos, throttle con promesas."
+      - "Throttle es asíncrono y debounce síncrono."
+    correcta: 1
+  - pregunta: '¿Por qué `.map(...).join("")` es mejor que `+=` en cada iteración?'
+    opciones:
+      - "Porque `map` es más rápido que `forEach`."
+      - "Porque construye el string completo en memoria y hace una única asignación al DOM en lugar de reparse por iteración."
+      - "Porque `join` evita problemas de escape de HTML."
+      - "Porque `+=` no funciona con template literals."
+      - "Porque `join` reutiliza el mismo string y ahorra memoria."
+    correcta: 1
+---
+
+import Solucion from "../../components/Solucion.astro";
+
+## El problema
+
+Tienes un input de búsqueda y una lista que se filtra en tiempo real.
+Escribes la implementación obvia: escuchas `input`, filtras, pintas.
+El resultado se comporta bien con 5 productos, pero llegan 5.000 y en un
+móvil se nota. Con conexión mala, cada pulsación dispara un fetch entero.
+
+Aquí hay dos problemas en el mismo listener, y merecen tratarse por
+separado. El primero es que se filtra y se repinta en cada tecla, cuando
+al usuario le interesa ver el resultado cuando termina de escribir, no
+mientras. El segundo es cómo se pinta: `innerHTML += ...` dentro de un
+bucle es una de las formas más caras de escribir HTML.
+
+## El código roto
+
+```javascript
+const input = document.getElementById("buscador");
+const lista = document.getElementById("resultados");
+
+const productos = ["Teclado", "Ratón", "Monitor", "Webcam", "Altavoz"];
+
+input.addEventListener("input", (e) => {
+  const query = e.target.value.toLowerCase();
+  lista.innerHTML = "";
+
+  productos
+    .filter((p) => p.toLowerCase().includes(query))
+    .forEach((p) => {
+      lista.innerHTML += "<div>" + p + "</div>";
+    });
+});
+```
+
+## Las pistas
+
+- El usuario no necesita ver el resultado en cada tecla, solo cuando para.
+- `innerHTML +=` en un bucle fuerza reparsear todo el nodo en cada iteración.
+- Construye el string completo en memoria y pinta una sola vez.
+
+<Solucion>
+
+```javascript
+const input = document.getElementById("buscador");
+const lista = document.getElementById("resultados");
+const productos = ["Teclado", "Ratón", "Monitor", "Webcam", "Altavoz"];
+
+// timeout vive fuera del listener para poder cancelarlo entre pulsaciones
+let timeout;
+
+input.addEventListener("input", (e) => {
+  // DEBOUNCE: cancela el filtrado pendiente si el usuario sigue tecleando,
+  // así solo se ejecuta una vez cuando para, en lugar de en cada tecla
+  clearTimeout(timeout);
+
+  timeout = setTimeout(() => {
+    const query = e.target.value.toLowerCase().trim();
+    const filtrados = productos.filter((p) => p.toLowerCase().includes(query));
+    // Construimos todo el HTML en memoria y lo asignamos UNA SOLA VEZ
+    lista.innerHTML = filtrados.map((p) => `<div>${p}</div>`).join("");
+  }, 200); // espera 200ms desde la última pulsación antes de filtrar y pintar
+});
+```
+
+Dos cambios, dos motivos separados.
+
+El **debounce** con `setTimeout` + `clearTimeout` posterga el trabajo
+hasta que el usuario deja de teclear. Cada pulsación cancela el
+temporizador anterior y arma uno nuevo; solo si pasan 200ms sin
+actividad se ejecuta el filtrado. Por eso `timeout` tiene que vivir
+fuera del listener: si estuviera dentro, cada invocación crearía su
+propia variable y no habría nada que cancelar.
+
+El **`map(...).join("")`** construye el HTML completo como string en
+memoria y lo asigna a `innerHTML` una sola vez. `innerHTML +=` en un
+bucle hace algo muy caro: lee el HTML actual del nodo (que el navegador
+tiene que serializar), lo concatena con el nuevo trozo, y parsea el
+resultado entero de vuelta. Cinco productos son cinco reparseos completos
+del contenedor.
+
+Si te preocupa la inyección de HTML (los productos vienen del usuario o
+de una API que no controlas), la versión con `textContent` y
+`DocumentFragment` es la segura:
+
+```javascript
+input.addEventListener("input", (e) => {
+  const query = e.target.value.toLowerCase().trim();
+
+  lista.textContent = ""; // Limpia el contenedor de forma segura
+
+  const fragment = document.createDocumentFragment();
+
+  productos
+    .filter((p) => p.toLowerCase().includes(query))
+    .forEach((p) => {
+      const item = document.createElement("div");
+      item.textContent = p; // Seguro ante inyecciones
+      fragment.appendChild(item);
+    });
+
+  lista.appendChild(fragment); // 1 sola modificación al DOM
+});
+```
+
+Sigue siendo una sola inserción al DOM, y ya no hay parseo de HTML
+en absoluto.
+
+</Solucion>

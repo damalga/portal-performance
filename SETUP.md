@@ -80,10 +80,10 @@ src/
     scroll-infinito.js
     progreso-lectura.js
   styles/
-    tokens.css           # colores, tipografía, espaciado, radios
-    reset.css            # reset moderno (Andy Bell-style, adaptado)
-    tipografia.css       # @font-face, estilos base de texto
-    global.css           # importa los tres anteriores, se carga en Base.astro
+    _tokens.scss         # colores, tipografía, espaciado, radios (partial)
+    _reset.scss          # reset moderno Andy Bell-style (partial)
+    _tipografia.scss     # @font-face, estilos base de texto (partial)
+    global.scss          # @use de los tres partials, se carga en Base.astro
 public/
   api/
     articulos-1.json
@@ -93,16 +93,16 @@ public/
   banners/               # .webp, pendientes de tu subida
 ```
 
-Ningún hex ni `rgb()` suelto en componentes. Todo desde `tokens.css`.
+Ningún hex ni `rgb()` suelto en componentes. Todo desde `_tokens.scss`.
 
 ---
 
 ## 5. Sistema de estilos
 
-- **Globales** (`src/styles/`): reset, `@font-face`, tokens, estilos base de tipografía y layout. Se importan una sola vez en `Base.astro`.
-- **Componentes**: `<style>` sin `lang` dentro de cada `.astro`. Astro los scopea por atributo automáticamente. Nada de BEM, nada de disciplina de nombres.
-- **Isla Preact**: CSS Modules (`Quiz.module.css`), que Vite ya monta sin config extra.
-- **Sin SCSS en ningún sitio**. Si en algún momento aparece una necesidad real (mixins, loops), lo añadimos solo para globales, no para componentes, y lo justificamos aquí.
+- **Globales** (`src/styles/`) en **SCSS**: `_tokens.scss`, `_reset.scss`, `_tipografia.scss` como partials, agregados desde `global.scss` con `@use`. Se importa una sola vez en `Base.astro`. Sass permite anidación con `&` y organización con `@use`/`@forward`.
+- **Componentes .astro**: `<style>` sin `lang` en cada componente. Astro los scopea por atributo automáticamente. **CSS plano** aquí, no SCSS (regla del proyecto: SCSS solo en archivos independientes). CSS moderno ya trae nesting nativo si se necesita.
+- **Isla Preact**: CSS Modules en `Quiz.module.scss`. Vite lo compila sin config extra al haber `sass` instalado.
+- **Cuándo añadir SCSS a un nuevo archivo global**: cualquier nuevo `src/styles/*.scss` va en SCSS por defecto. Si se acaba necesitando otro CSS Module en un componente, también en `.module.scss`.
 
 ---
 
@@ -313,7 +313,7 @@ Sin `test`, sin `prepare`, sin husky. Si aparece necesidad real, se añade y se 
 - [ ] `pnpm build` produce `dist/` sin errores.
 - [ ] `pnpm lint` pasa (aunque el proyecto esté vacío, la config debe validar).
 - [ ] `pnpm format:check` pasa.
-- [ ] `tokens.css`, `reset.css`, `tipografia.css`, `global.css` existen y `Base.astro` los importa.
+- [ ] `_tokens.scss`, `_reset.scss`, `_tipografia.scss`, `global.scss` existen y `Base.astro` los importa (vía `global.scss` con `@use`).
 - [ ] `Base.astro` renderiza una página en blanco válida (html, head con fuentes precargadas, main vacío).
 - [ ] `.gitignore` excluye `dist/`, `node_modules/`, `.astro/`, `.env*`.
 - [ ] `package.json` tiene los scripts de la sección 13.

@@ -1,0 +1,140 @@
+---
+titulo: "Trabajo repetido dentro del bucle"
+orden: 4
+categoria: dom
+resumen: "Actualizar un contador en cada iteración cuando el total ya se sabe de golpe."
+conceptos: ["debounce", "batching", "trabajo dentro del bucle"]
+dificultad: 1
+minutos: 6
+quiz:
+  - pregunta: "¿Por qué actualizar `contador.textContent` dentro del bucle es un problema?"
+    opciones:
+      - "Porque el DOM no permite modificar dos nodos en el mismo tick."
+      - "Porque cada escritura es una modificación al DOM que se hace N veces cuando el total se puede calcular una sola vez con `.length`."
+      - "Porque `textContent` es más lento que `innerText` en navegadores modernos."
+      - "Porque `forEach` no permite side effects según la especificación."
+      - "Porque el contador queda desactualizado si el usuario sigue tecleando."
+    correcta: 1
+  - pregunta: "¿Qué propiedad usarías para obtener el total del filtro directamente, sin llevar cuenta manual?"
+    opciones:
+      - "`filtrados.count`"
+      - "`filtrados.size`"
+      - "`filtrados.length`"
+      - "`filtrados.total()`"
+      - "`filtrados.entries().count`"
+    correcta: 2
+  - pregunta: "¿Por qué combinar debounce con `tbody.innerHTML = ...` funciona bien aquí?"
+    opciones:
+      - "Porque `innerHTML` se ejecuta en microtask y no bloquea."
+      - 'Porque el debounce garantiza que la reasignación se hace una sola vez tras el input, y `.map().join("")` construye el string entero para pintarlo de golpe.'
+      - "Porque `tbody` es un elemento especial que el navegador optimiza."
+      - "Porque el bucle interno se paraleliza al usar `map`."
+      - "Porque el navegador solo repinta si el HTML resultante cambia."
+    correcta: 1
+  - pregunta: "El código roto no tiene innerHTML `+=`, tiene innerHTML `+=` dentro del bucle. ¿Qué implica?"
+    opciones:
+      - "Que el navegador ignora las asignaciones intermedias y solo aplica la última."
+      - "Que cada iteración serializa y reparsea el HTML del `tbody` entero, con coste creciente conforme se llena."
+      - "Que el DOM no ve los cambios hasta que termina el bucle."
+      - "Que las filas quedan sin estilo porque el navegador no aplica CSS a nodos nuevos."
+      - "Que `forEach` bloquea el hilo hasta que termina."
+    correcta: 1
+  - pregunta: "¿Cuál es el principio general que enseña este ejercicio?"
+    opciones:
+      - "Nunca uses `forEach`, siempre `for` clásico."
+      - "El trabajo que se puede hacer una sola vez fuera del bucle no tiene por qué repetirse en cada iteración."
+      - "El DOM es rápido si se accede desde un microtask."
+      - "Los contadores en la UI siempre deben ir en un componente separado."
+      - "Las tablas son un caso especial que exige batching manual."
+    correcta: 1
+---
+
+import Solucion from "../../components/Solucion.astro";
+
+## El problema
+
+Un buscador que filtra artículos y actualiza un contador de resultados.
+Parece razonable llevar la cuenta dentro del bucle: cada vez que se
+añade una fila, se suma uno. Pero el contador no necesita saber cuántos
+lleva, solo cuántos hay al final — y al final ya lo dice `.length`.
+
+Y como bono, este código repite dos veces el problema del artículo
+anterior: filtra en cada tecla e incendia el DOM con `innerHTML +=`
+dentro del bucle.
+
+## El código roto
+
+```javascript
+const input = document.getElementById("buscador");
+const tbody = document.getElementById("filas");
+const contador = document.getElementById("total");
+
+const articulos = [
+  { titulo: "Análisis del Pixel", categoria: "Móviles" },
+  { titulo: "Guía de teclados", categoria: "Periféricos" },
+  { titulo: "Qué es RISC-V", categoria: "Hardware" },
+  { titulo: "Review SSD Gen5", categoria: "Almacenamiento" },
+];
+
+input.addEventListener("input", (e) => {
+  const query = e.target.value.toLowerCase();
+  tbody.innerHTML = "";
+  let total = 0;
+
+  articulos.forEach((art) => {
+    if (art.titulo.toLowerCase().includes(query)) {
+      tbody.innerHTML += `<tr><td>${art.titulo}</td><td>${art.categoria}</td></tr>`;
+      total++;
+      contador.textContent = "Resultados: " + total;
+    }
+  });
+});
+```
+
+## Las pistas
+
+- Debounce fuera, filtrado dentro.
+- El total se conoce de golpe una vez filtrado. `.length` lo tiene.
+- Una sola asignación a `innerHTML` con `map(...).join("")`.
+
+<Solucion>
+
+```javascript
+const input = document.getElementById("buscador");
+const tbody = document.getElementById("filas");
+const contador = document.getElementById("total");
+
+const articulos = [
+  { titulo: "Análisis del Pixel", categoria: "Móviles" },
+  { titulo: "Guía de teclados", categoria: "Periféricos" },
+  { titulo: "Qué es RISC-V", categoria: "Hardware" },
+  { titulo: "Review SSD Gen5", categoria: "Almacenamiento" },
+];
+
+let timeout;
+
+input.addEventListener("input", (e) => {
+  clearTimeout(timeout);
+
+  timeout = setTimeout(() => {
+    const query = e.target.value.toLowerCase();
+    const filtrados = articulos.filter((art) => art.titulo.toLowerCase().includes(query));
+    tbody.innerHTML = filtrados
+      .map((art) => `<tr><td>${art.titulo}</td><td>${art.categoria}</td></tr>`)
+      .join("");
+    contador.textContent = "Resultados: " + filtrados.length;
+  }, 200);
+});
+```
+
+El cambio de fondo es sacar el contador fuera del bucle. Antes se
+recalculaba en cada iteración; ahora se calcula una sola vez porque
+`filtrados.length` ya lo sabe. Es la misma idea que el ejercicio 1:
+todo el trabajo repetido que se puede hacer una sola vez debe hacerse
+una sola vez.
+
+El resto son los patrones del ejercicio anterior aplicados: debounce
+para no filtrar en cada tecla, `map(...).join("")` para no reparsear
+el `tbody` en cada iteración.
+
+</Solucion>

@@ -1,0 +1,354 @@
+---
+import Base from "../layouts/Base.astro";
+import Nav from "../components/Nav.astro";
+import Nota from "../components/Nota.astro";
+---
+
+<Base
+  titulo="En acción · Portal Performance"
+  descripcion="Los 8 patrones de rendimiento corriendo juntos en una sola página, anotados uno a uno."
+>
+  <Nav />
+
+  <main class="pagina">
+    <header class="hero">
+      <p class="kicker">Demo integrada</p>
+      <h1>Los ocho patrones, funcionando a la vez</h1>
+      <p class="lead">
+        Cada sección de esta página aplica uno de los ocho ejercicios sobre contenido real. No hay
+        simulación: el patrón que la sección explica es exactamente el que la sección usa. Es el
+        sitio predicando lo que enseña, pero condensado en una sola URL.
+      </p>
+    </header>
+
+    <section id="render-lista" class="seccion" aria-labelledby="titulo-render-lista">
+      <header class="cabecera">
+        <a href="/ejercicios/render-lista" class="marca">
+          <span class="num">01</span>
+          <span class="etiqueta">render-lista · DOM</span>
+        </a>
+        <h2 id="titulo-render-lista">Insertar N tarjetas: con y sin fragment</h2>
+        <p class="intro">
+          Dos botones, mismo resultado visible en el DOM. La diferencia está en cuántas veces el
+          navegador tiene que replantear layout: N con la versión rota (una modificación por
+          iteración del bucle), una sola con <code>DocumentFragment</code>. Sube el contador a 5.000
+          y abre la pestaña Performance: la sierra en la línea de <strong>Layout</strong> del botón rojo
+          desaparece con el fragment.
+        </p>
+        <p class="intro">
+          El bloque de controles de aquí abajo, además, usa un solo listener sobre el contenedor
+          padre — es el ejercicio 6 aplicado sin pretensiones.
+        </p>
+      </header>
+
+      <Nota tipo="advertencia">
+        <p>
+          Los milisegundos que muestra el reloj de aquí abajo son orientativos, no
+          concluyentes. Firefox y Safari reducen la precisión de <code>performance.now()</code>
+          como medida anti-fingerprinting (1ms por defecto), y Blink (Chromium) agrupa
+          mutaciones al DOM de forma más agresiva que Gecko. La comparación honesta la
+          enseña el timeline del panel <strong>Performance</strong> de las devtools, en
+          las líneas <em>Recalculate Style</em> y <em>Layout</em>.
+        </p>
+      </Nota>
+
+      <div class="controles" role="group" aria-label="Comparativa de patrones">
+        <label class="cantidad">
+          <span>Elementos</span>
+          <select id="render-lista-cantidad">
+            <option value="50">50</option>
+            <option value="500" selected>500</option>
+            <option value="5000">5.000</option>
+          </select>
+        </label>
+        <button type="button" data-accion="roto" class="boton roto">
+          Sin fragment (código roto)
+        </button>
+        <button type="button" data-accion="solucion" class="boton solucion">
+          Con DocumentFragment
+        </button>
+        <output id="render-lista-medida" aria-live="polite">
+          <span class="medida-placeholder">— ms</span>
+        </output>
+      </div>
+
+      <div id="lista-render" class="lista" aria-label="Elementos pintados"></div>
+
+      <a href="/ejercicios/render-lista" class="volver">Explicación completa del patrón →</a>
+    </section>
+  </main>
+
+  <script>
+    // Demo comparativa del ejercicio 1 (render-lista).
+    // Los dos caminos: N appendChild al DOM vs N appendChild a un DocumentFragment
+    // seguido de una única inserción. Delegación de eventos en el bloque de controles.
+    const seccion = document.getElementById("render-lista");
+    const container = document.getElementById("lista-render");
+    const selector = document.getElementById("render-lista-cantidad") as HTMLSelectElement | null;
+    const output = document.getElementById("render-lista-medida");
+    const controles = seccion?.querySelector<HTMLDivElement>(".controles");
+
+    function crearTarjeta(i: number) {
+      const item = document.createElement("div");
+      item.className = "tarjeta-demo";
+      item.textContent = "Elemento " + i;
+      return item;
+    }
+
+    // Versión rota: cada createElement + appendChild al contenedor real.
+    function pintarSinFragment(cantidad: number) {
+      if (!container) return 0;
+      container.textContent = "";
+      const t0 = performance.now();
+      for (let i = 0; i < cantidad; i++) {
+        container.appendChild(crearTarjeta(i));
+      }
+      return performance.now() - t0;
+    }
+
+    // Versión solución: acumula en fragment, una única inserción al final.
+    function pintarConFragment(cantidad: number) {
+      if (!container) return 0;
+      container.textContent = "";
+      const t0 = performance.now();
+      const fragment = document.createDocumentFragment();
+      for (let i = 0; i < cantidad; i++) {
+        fragment.appendChild(crearTarjeta(i));
+      }
+      container.appendChild(fragment);
+      return performance.now() - t0;
+    }
+
+    if (controles && output && selector) {
+      controles.addEventListener("click", (e) => {
+        const boton = (e.target as Element)?.closest<HTMLButtonElement>("button[data-accion]");
+        if (!boton) return;
+
+        const cantidad = Number(selector.value);
+        const ms =
+          boton.dataset.accion === "roto"
+            ? pintarSinFragment(cantidad)
+            : pintarConFragment(cantidad);
+
+        const etiqueta = boton.dataset.accion === "roto" ? "sin fragment" : "con fragment";
+        output.innerHTML = `<strong>${ms.toFixed(1)} ms</strong> · ${cantidad} elementos · ${etiqueta}`;
+        output.dataset.ultimo = boton.dataset.accion;
+      });
+    }
+  </script>
+</Base>
+
+<style>
+  .pagina {
+    max-width: 76rem;
+    margin: 0 auto;
+    padding: var(--esp-2xl) var(--esp-lg) var(--esp-3xl);
+  }
+
+  .hero {
+    max-width: var(--col-prosa);
+    margin-bottom: var(--esp-3xl);
+  }
+
+  .kicker {
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-000);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--acento);
+    margin: 0 0 var(--esp-sm);
+  }
+
+  .hero h1 {
+    font-family: var(--fuente-display);
+    font-size: var(--paso-6);
+    line-height: var(--lh-tight);
+    letter-spacing: -0.03em;
+    margin: 0 0 var(--esp-md);
+  }
+
+  .hero .lead {
+    font-size: var(--paso-1);
+    line-height: var(--lh-largo);
+    max-width: none;
+  }
+
+  .seccion {
+    padding: var(--esp-2xl) 0;
+    border-top: 4px solid var(--tinta);
+    scroll-margin-top: var(--esp-lg);
+  }
+
+  .cabecera {
+    max-width: var(--col-prosa);
+    display: flex;
+    flex-direction: column;
+    gap: var(--esp-md);
+    margin-bottom: var(--esp-xl);
+  }
+
+  .marca {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--esp-sm);
+    text-decoration: none;
+    color: inherit;
+    align-self: flex-start;
+  }
+
+  .marca .num {
+    font-family: var(--fuente-display);
+    font-size: var(--paso-4);
+    font-weight: 800;
+    color: var(--acento);
+    line-height: 1;
+  }
+
+  .marca .etiqueta {
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-00);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: var(--esp-2xs) var(--esp-xs);
+    background: var(--destacado);
+    color: var(--tinta);
+    border-radius: var(--radio-sm);
+  }
+
+  .marca:hover .etiqueta {
+    background: var(--acento);
+    color: var(--papel);
+  }
+
+  .seccion h2 {
+    font-family: var(--fuente-display);
+    font-size: var(--paso-4);
+    line-height: var(--lh-corto);
+    margin: 0;
+    letter-spacing: -0.02em;
+  }
+
+  .intro {
+    font-size: var(--paso-0);
+    line-height: var(--lh-largo);
+    margin: 0;
+  }
+
+  .intro code {
+    font-family: var(--fuente-mono);
+    font-size: 0.95em;
+    padding: 0 var(--esp-2xs);
+    background: var(--publi);
+    border: 1px solid color-mix(in srgb, var(--texto) 20%, transparent);
+    border-radius: var(--radio-sm);
+  }
+
+  .controles {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--esp-sm);
+    padding: var(--esp-md);
+    border: 2px solid var(--tinta);
+    border-radius: var(--radio-md);
+    background: var(--fondo);
+    margin-bottom: var(--esp-lg);
+  }
+
+  .cantidad {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--esp-xs);
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-000);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .cantidad select {
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-00);
+    padding: var(--esp-2xs) var(--esp-xs);
+    border: 1px solid var(--texto);
+    border-radius: var(--radio-sm);
+    background: var(--fondo);
+    color: var(--texto);
+  }
+
+  .boton {
+    font-family: var(--fuente-display);
+    font-weight: 700;
+    font-size: var(--paso-00);
+    padding: var(--esp-xs) var(--esp-md);
+    border: 2px solid var(--tinta);
+    border-radius: var(--radio-sm);
+    cursor: pointer;
+    transition:
+      transform 100ms,
+      background 100ms;
+  }
+
+  .boton.roto {
+    background: var(--fondo);
+    color: var(--error);
+    border-color: var(--error);
+  }
+
+  .boton.roto:hover {
+    background: var(--error);
+    color: var(--papel);
+  }
+
+  .boton.solucion {
+    background: var(--acento);
+    color: var(--papel);
+    border-color: var(--acento);
+  }
+
+  .boton.solucion:hover {
+    transform: translateY(-1px);
+  }
+
+  output {
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-00);
+    padding: var(--esp-2xs) var(--esp-sm);
+    margin-left: auto;
+  }
+
+  output strong {
+    color: var(--acento);
+  }
+
+  .medida-placeholder {
+    opacity: 0.5;
+  }
+
+  .lista {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: var(--esp-xs);
+    margin-bottom: var(--esp-xl);
+    min-height: var(--esp-2xl);
+  }
+
+  .lista :global(.tarjeta-demo) {
+    padding: var(--esp-sm) var(--esp-md);
+    border: 1px solid var(--texto);
+    border-radius: var(--radio-sm);
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-00);
+    text-align: center;
+    background: var(--fondo);
+  }
+
+  .volver {
+    font-family: var(--fuente-display);
+    font-weight: 700;
+    font-size: var(--paso-1);
+    color: var(--acento);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+  }
+</style>

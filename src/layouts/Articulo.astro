@@ -1,0 +1,146 @@
+---
+import Base from "./Base.astro";
+import Nav from "../components/Nav.astro";
+import PlaceholderPortada from "../components/PlaceholderPortada.astro";
+
+interface Props {
+  titulo: string;
+  resumen: string;
+  categoria: "dom" | "eventos" | "datos" | "metricas";
+  conceptos: string[];
+}
+
+const { titulo, resumen, categoria, conceptos } = Astro.props;
+---
+
+<Base titulo={`${titulo} · Portal Performance`} descripcion={resumen}>
+  <Nav />
+
+  <article class="ficha">
+    <header class="cabecera">
+      <PlaceholderPortada titulo={titulo} />
+      <div class="meta">
+        <span class="categoria">{categoria}</span>
+      </div>
+      <h1>{titulo}</h1>
+      <p class="lead">{resumen}</p>
+      <ul class="conceptos" aria-label="Conceptos que cubre el ejercicio">
+        {conceptos.map((c) => <li>{c}</li>)}
+      </ul>
+    </header>
+
+    <div class="cuerpo">
+      <slot />
+    </div>
+  </article>
+</Base>
+
+<style>
+  .ficha {
+    max-width: 72ch;
+    margin: 0 auto;
+    padding: var(--esp-lg) var(--esp-lg) var(--esp-3xl);
+  }
+
+  .cabecera {
+    margin-bottom: var(--esp-2xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--esp-md);
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--esp-md);
+    align-items: center;
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-000);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .categoria {
+    padding: var(--esp-2xs) var(--esp-xs);
+    background: var(--destacado);
+    color: var(--tinta);
+    border-radius: var(--radio-sm);
+  }
+
+  h1 {
+    font-family: var(--fuente-display);
+    font-size: var(--paso-5);
+    line-height: var(--lh-corto);
+    margin: 0;
+    letter-spacing: -0.02em;
+  }
+
+  .lead {
+    font-size: var(--paso-1);
+    line-height: var(--lh-largo);
+    max-width: none;
+    color: var(--texto);
+  }
+
+  .conceptos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--esp-xs);
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  .conceptos li {
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-000);
+    padding: var(--esp-2xs) var(--esp-xs);
+    border: 1px solid var(--texto);
+    border-radius: var(--radio-sm);
+  }
+
+  .cuerpo :global(h2) {
+    font-family: var(--fuente-display);
+    font-size: var(--paso-3);
+    line-height: var(--lh-medio);
+    margin-top: var(--esp-2xl);
+    margin-bottom: var(--esp-md);
+  }
+
+  .cuerpo :global(h3) {
+    font-family: var(--fuente-display);
+    font-size: var(--paso-2);
+    margin-top: var(--esp-xl);
+    margin-bottom: var(--esp-sm);
+  }
+
+  .cuerpo :global(p),
+  .cuerpo :global(li) {
+    font-size: var(--paso-0);
+    line-height: var(--lh-largo);
+  }
+
+  .cuerpo :global(ul):not([role="radiogroup"]) {
+    padding-left: var(--esp-lg);
+  }
+
+  .cuerpo :global(pre) {
+    padding: var(--esp-md);
+    border-radius: var(--radio-md);
+    overflow-x: auto;
+    font-size: var(--paso-00);
+    line-height: var(--lh-medio);
+    background: var(--tinta);
+    color: var(--papel);
+  }
+
+  .cuerpo :global(p code),
+  .cuerpo :global(li code) {
+    font-family: var(--fuente-mono);
+    font-size: 0.95em;
+    padding: 0 var(--esp-2xs);
+    background: var(--publi);
+    border: 1px solid color-mix(in srgb, var(--texto) 20%, transparent);
+    border-radius: var(--radio-sm);
+  }
+</style>

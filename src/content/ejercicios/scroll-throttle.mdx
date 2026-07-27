@@ -1,0 +1,143 @@
+---
+titulo: "Scroll que dispara cientos de veces"
+orden: 5
+categoria: eventos
+resumen: "El evento scroll se emite decenas de veces por segundo. Cómo cortarlo bien para trabajo visual."
+conceptos: ["throttle", "requestAnimationFrame", "scroll"]
+dificultad: 2
+minutos: 10
+quiz:
+  - pregunta: "¿Por qué debounce no vale para actualizar una barra de progreso de scroll?"
+    opciones:
+      - "Porque debounce solo funciona con eventos de teclado."
+      - "Porque debounce solo dispara cuando la actividad para, y aquí la barra tiene que moverse mientras el usuario hace scroll."
+      - "Porque `setTimeout` interfiere con el hilo del scroll."
+      - "Porque el navegador ignora los cambios a `style.width` durante scroll."
+      - "Porque debounce se implementa con `requestAnimationFrame`, no con `setTimeout`."
+    correcta: 1
+  - pregunta: "¿Cuál es la diferencia entre throttle y `requestAnimationFrame` para este caso?"
+    opciones:
+      - "Ninguna: los dos limitan a un ritmo fijo."
+      - "Throttle deja pasar cada X ms sin importar el refresh rate; `requestAnimationFrame` se alinea con cada frame que el navegador va a pintar, ni uno de más ni de menos."
+      - "`requestAnimationFrame` es más lento porque espera al compositor."
+      - "Throttle usa promesas, `requestAnimationFrame` usa callbacks."
+      - "`requestAnimationFrame` solo funciona en canvas."
+    correcta: 1
+  - pregunta: "¿Qué gana usar `requestAnimationFrame` frente a `setTimeout(cb, 16)` para trabajo visual?"
+    opciones:
+      - "Nada, el navegador los trata igual."
+      - "Se sincroniza con el ciclo de repintado del navegador y se pausa automáticamente cuando la pestaña no es visible."
+      - "Es un API síncrono y por eso responde antes."
+      - "Puede ejecutarse en un worker."
+      - "Devuelve una promesa que resuelve al terminar el frame."
+    correcta: 1
+  - pregunta: "¿Qué problema tiene la versión throttle con bandera y `setTimeout(fn, 200)` para una barra de progreso?"
+    opciones:
+      - "Ninguno, es la solución óptima."
+      - "Si el usuario para de golpe en un punto entre disparos, la barra puede quedarse desactualizada porque el último tick no se ejecuta."
+      - "La bandera queda bloqueada permanentemente si el usuario cambia de pestaña."
+      - "El `clearTimeout` no funciona con throttle."
+      - "El evento scroll deja de emitirse tras el primer throttle."
+    correcta: 1
+  - pregunta: "El listener de scroll del código roto puede dispararse cien veces por segundo. ¿Qué implica en la práctica?"
+    opciones:
+      - "Que el navegador colapsa y el scroll se congela."
+      - "Que cada disparo hace `scrollHeight` (que fuerza layout), calcula el porcentaje y escribe en style, con coste que se suma frame a frame y roba tiempo al scroll suave."
+      - "Que la memoria crece indefinidamente por los listeners registrados."
+      - "Que `scrollY` devuelve valores incorrectos por la contención."
+      - "Nada relevante en hardware moderno."
+    correcta: 1
+---
+
+import Solucion from "../../components/Solucion.astro";
+
+## El problema
+
+Una barra de progreso de lectura en la cabecera. Cada vez que el
+usuario hace scroll, calculas qué porcentaje del artículo ha visto y
+pintas el ancho de la barra. Simple.
+
+El problema no es el cálculo, es la frecuencia. El evento `scroll` se
+dispara a ritmo del sistema — decenas o cientos de veces por segundo —
+y cada disparo lee `scrollHeight`, que fuerza al navegador a recalcular
+layout, y escribe a `style.width`, que fuerza repintado. Sumado, roba
+suficiente tiempo del hilo principal como para que el propio scroll
+deje de ser suave.
+
+## El código roto
+
+```javascript
+const barra = document.getElementById("progreso");
+
+window.addEventListener("scroll", () => {
+  const total = document.documentElement.scrollHeight - window.innerHeight;
+  const leido = window.scrollY;
+  const porcentaje = (leido / total) * 100;
+  barra.style.width = porcentaje + "%";
+});
+```
+
+## Las pistas
+
+- Aquí debounce no vale: la barra tiene que moverse durante el scroll, no al parar.
+- Throttle con bandera + `setTimeout` es la versión más clásica.
+- `requestAnimationFrame` es la versión fina para trabajo visual.
+
+<Solucion>
+
+```javascript
+const barra = document.getElementById("progreso");
+let stop = false;
+
+window.addEventListener("scroll", () => {
+  if (stop) return;
+  stop = true;
+
+  const total = document.documentElement.scrollHeight - window.innerHeight;
+  const leido = window.scrollY;
+  const porcentaje = (leido / total) * 100;
+  barra.style.width = porcentaje + "%";
+
+  setTimeout(() => {
+    stop = false;
+  }, 200);
+});
+```
+
+Este es el patrón **throttle** clásico: una bandera bloquea el listener
+tras cada ejecución, y un `setTimeout` la libera pasados 200ms.
+El resultado es que, como mucho, se ejecuta cinco veces por segundo,
+independientemente de cuánto haga scroll el usuario. Funciona, y es
+fácil de leer, pero tiene un pequeño defecto: si el usuario para
+justo entre disparos, la barra puede quedarse un pelín por debajo del
+porcentaje real. Para una barra de progreso no es dramático; para
+guardar una posición exacta, sí.
+
+La versión fina para trabajo visual es `requestAnimationFrame`:
+
+```javascript
+const barra = document.getElementById("progreso");
+let pendiente = false;
+
+window.addEventListener("scroll", () => {
+  if (pendiente) return;
+  pendiente = true;
+
+  requestAnimationFrame(() => {
+    const total = document.documentElement.scrollHeight - window.innerHeight;
+    const porcentaje = (window.scrollY / total) * 100;
+    barra.style.width = porcentaje + "%";
+    pendiente = false;
+  });
+});
+```
+
+`requestAnimationFrame` le dice al navegador: "ejecuta esto justo antes
+del próximo repintado". El callback corre una sola vez por frame, ni
+una de más, y si la pestaña no es visible se pausa automáticamente.
+Para cualquier cosa que afecte al pintado, es la opción correcta.
+
+Este es el script que gobierna la barra de progreso real del sitio, si
+te fijas en la parte de arriba.
+
+</Solucion>

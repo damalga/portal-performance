@@ -1,0 +1,119 @@
+---
+titulo: "Datos que llegan incompletos"
+orden: 2
+categoria: datos
+resumen: "El backend te promete un campo y no llega. Cómo proteger la UI sin tapar el bug real."
+conceptos: ["optional chaining", "nullish coalescing", "manejo de errores"]
+dificultad: 1
+minutos: 7
+quiz:
+  - pregunta: "¿Qué pasa cuando `user.profile` es `undefined` y ejecutas `user.profile.name`?"
+    opciones:
+      - "Devuelve `undefined` silenciosamente y el textContent queda vacío."
+      - "Lanza un `TypeError: Cannot read properties of undefined`."
+      - "Devuelve el string 'undefined' y lo pinta como texto."
+      - "El navegador lo interpreta como null y no rompe."
+      - "Depende de si el modo estricto está activo."
+    correcta: 1
+  - pregunta: "¿Cuál es la diferencia real entre `??` y `||` en JavaScript?"
+    opciones:
+      - "Ninguna: son sinónimos y `??` es la forma moderna."
+      - "`||` es más rápido porque no necesita comprobar el tipo."
+      - "`||` sustituye cualquier valor falsy (0, '', false); `??` solo sustituye `null` y `undefined`."
+      - "`??` funciona con promesas y `||` no."
+      - "`||` funciona en TypeScript y `??` solo en JavaScript."
+    correcta: 2
+  - pregunta: "Cargas un producto con `precio: 0`. ¿Qué imprime `producto.precio || 'sin precio'`?"
+    opciones:
+      - "`0`, porque `0` es un número válido."
+      - "`'sin precio'`, porque `0` es falsy y `||` lo sustituye."
+      - "`null`, porque el operador cortocircuita antes de evaluar."
+      - "`undefined`, porque el valor por defecto solo aplica a strings."
+      - "Lanza un error porque `||` no acepta números."
+    correcta: 1
+  - pregunta: "¿Por qué añadir `.catch()` en la cadena de `fetch`?"
+    opciones:
+      - "Porque `.then` no captura errores lanzados dentro de otro `.then`."
+      - "Porque `fetch` no rechaza en errores HTTP como 500, pero sí en fallos de red, y en ambos casos hay que decidir qué hacer con la UI."
+      - "Porque el navegador cancela la petición si no hay `.catch` en 5 segundos."
+      - "Porque sin `.catch` el garbage collector no libera la respuesta."
+      - "Es opcional; JavaScript siempre te avisa en consola aunque no lo pongas."
+    correcta: 1
+  - pregunta: "El campo `name` era obligatorio por contrato con backend. ¿Qué se hace además de proteger la UI con `??`?"
+    opciones:
+      - "Nada más: si la UI no rompe, el trabajo está hecho."
+      - "Reportar el fallo al backend porque el bug es suyo; el fallback solo evita que la interfaz se caiga mientras tanto."
+      - "Reintentar la petición hasta que llegue el campo."
+      - "Cambiar el schema para marcar `name` como opcional."
+      - "Rellenar el campo automáticamente con el email del usuario."
+    correcta: 1
+---
+
+import Solucion from "../../components/Solucion.astro";
+
+## El problema
+
+Renderizas datos que vienen del backend. En pruebas todo funciona: el
+endpoint devuelve el JSON esperado con su `profile.name` dentro. En
+producción, un día cualquiera, llega una respuesta con `profile: null` (o
+sin `profile`), y la app entera casca con un `TypeError` que ni siquiera
+sabes dónde tratar.
+
+El error es doble: la interfaz no está preparada para datos irregulares,
+y no hay manejo de fallo alguno en la promesa. Ambas cosas se arreglan
+sin taparle al backend que te está mandando basura.
+
+## El código roto
+
+```javascript
+function mostrarUsuario(user) {
+  const el = document.getElementById("username");
+  el.textContent = user.profile.name;
+}
+
+fetch("/api/user")
+  .then((res) => res.json())
+  .then((user) => mostrarUsuario(user));
+```
+
+## Las pistas
+
+- Encadena `?.` en cada punto donde el objeto podría no existir.
+- `??` no es `||`: piensa qué pasa con `0`, `""` y `false`.
+- Un `.catch()` no es opcional cuando la red puede fallar.
+
+<Solucion>
+
+```javascript
+function mostrarUsuario(user) {
+  const el = document.getElementById("username");
+  el.textContent = user?.profile?.name ?? "Anónimo";
+}
+
+fetch("/api/user")
+  .then((res) => res.json())
+  .then((user) => mostrarUsuario(user))
+  .catch((err) => console.error("No se pudo cargar el usuario:", err));
+```
+
+El optional chaining (`?.`) corta la evaluación si algo por el camino es
+`null` o `undefined`, y devuelve `undefined` en vez de lanzar. El
+nullish coalescing (`??`) sustituye ese `undefined` por el fallback,
+pero solo cuando el valor es `null` o `undefined` — deja pasar `0`,
+`""` y `false`, que sí pueden ser datos válidos.
+
+El `.catch` está para el caso realista: la red se cae, el servidor
+tarda demasiado o devuelve un JSON que no se puede parsear. Sin él, el
+error se convierte en un `unhandled promise rejection` silencioso que
+solo verás si abres la consola.
+
+Falta una cosa que este snippet no cubre: si `name` era obligatorio en
+el contrato de datos, el bug es del backend. El `?? "Anónimo"` evita que
+la UI se caiga, pero no arregla nada. Repórtalo. Los fallbacks tapan
+síntomas, no problemas.
+
+Como bonus, `fetch` no rechaza en respuestas 4xx o 5xx — solo en fallos
+de red. Si quieres tratarlos como error, comprueba `res.ok` antes de
+llamar a `res.json()`.
+
+</Solucion>

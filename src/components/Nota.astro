@@ -1,0 +1,89 @@
+---
+type Tipo = "info" | "advertencia" | "truco" | "error";
+
+interface Props {
+  tipo?: Tipo;
+  titulo?: string;
+}
+
+const { tipo = "info", titulo } = Astro.props;
+
+const etiquetas: Record<Tipo, string> = {
+  info: "Nota",
+  advertencia: "Aviso",
+  truco: "Truco",
+  error: "Atención",
+};
+
+const etiqueta = titulo ?? etiquetas[tipo];
+---
+
+<aside class:list={["nota", tipo]} role="note" aria-label={etiqueta}>
+  <p class="etiqueta">{etiqueta}</p>
+  <div class="cuerpo">
+    <slot />
+  </div>
+</aside>
+
+<style>
+  .nota {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--esp-sm) var(--esp-md);
+    align-items: baseline;
+    padding: var(--esp-md) var(--esp-lg);
+    margin: var(--esp-lg) 0;
+    border-left: 4px solid var(--marca);
+    border-radius: 0 var(--radio-md) var(--radio-md) 0;
+    background: color-mix(in srgb, var(--marca) 8%, transparent);
+    max-width: var(--col-prosa);
+  }
+
+  .nota.info {
+    --marca: var(--acento);
+  }
+  .nota.advertencia {
+    --marca: var(--destacado);
+  }
+  .nota.truco {
+    --marca: var(--exito);
+  }
+  .nota.error {
+    --marca: var(--error);
+  }
+
+  .etiqueta {
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-000);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--marca);
+    margin: 0;
+    padding: var(--esp-2xs) var(--esp-xs);
+    background: var(--fondo);
+    border: 1px solid var(--marca);
+    border-radius: var(--radio-sm);
+    white-space: nowrap;
+    align-self: start;
+  }
+
+  .cuerpo :global(p) {
+    margin: 0;
+    max-width: none;
+    font-size: var(--paso-00);
+    line-height: var(--lh-largo);
+  }
+
+  .cuerpo :global(p + p) {
+    margin-top: var(--esp-sm);
+  }
+
+  .cuerpo :global(code) {
+    font-family: var(--fuente-mono);
+    font-size: 0.95em;
+    padding: 0 var(--esp-2xs);
+    background: var(--publi);
+    border: 1px solid color-mix(in srgb, var(--texto) 20%, transparent);
+    border-radius: var(--radio-sm);
+  }
+</style>

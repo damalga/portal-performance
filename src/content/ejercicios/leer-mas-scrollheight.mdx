@@ -1,0 +1,135 @@
+---
+titulo: "Leer y escribir alternado"
+orden: 7
+categoria: dom
+resumen: "Medir y escribir en el mismo bucle fuerza al navegador a reflowar N veces. Separar fases lo rompe."
+conceptos: ["layout thrashing", "reflow forzado síncrono", "scrollHeight"]
+dificultad: 3
+minutos: 10
+quiz:
+  - pregunta: "¿Qué es un “reflow forzado síncrono”?"
+    opciones:
+      - "Un tipo de animación CSS que no se puede optimizar."
+      - "Cuando JavaScript pide una medida del layout (scrollHeight, offsetWidth...) obligando al navegador a recalcular ahí mismo las mutaciones pendientes, en vez de esperar al final del script."
+      - "El evento que emite el DOM cuando termina un repaint."
+      - "El bloqueo del hilo principal cuando hay demasiados listeners."
+      - "Un modo del navegador para depurar layouts complejos."
+    correcta: 1
+  - pregunta: "¿Cuál de estas propiedades fuerza reflow síncrono al leerse?"
+    opciones:
+      - "`textContent`"
+      - "`className`"
+      - "`scrollHeight`"
+      - "`dataset`"
+      - "`innerHTML`"
+    correcta: 2
+  - pregunta: "¿Qué es el “layout thrashing”?"
+    opciones:
+      - "Cuando el navegador se queda sin memoria RAM para el layout."
+      - "El patrón de alternar lecturas y escrituras al DOM en un bucle, provocando N reflows síncronos donde bastaría con uno o dos."
+      - "Un fallo del compositor cuando hay demasiadas capas."
+      - "La contención entre event loop y garbage collector."
+      - "Una técnica antigua de animación que ya no se usa."
+    correcta: 1
+  - pregunta: "¿Por qué la solución separa lecturas y escrituras en dos bucles?"
+    opciones:
+      - "Porque `forEach` no permite dos operaciones en el mismo callback."
+      - "Porque agrupar todas las lecturas primero permite al navegador reflowar una sola vez para servirlas, y luego las escrituras se aplican sin obligar a más medidas."
+      - "Porque el hilo principal no puede leer y escribir en la misma vuelta del event loop."
+      - "Porque `document.createElement` bloquea las lecturas de layout siguientes."
+      - "Porque las escrituras son asíncronas y no se pueden mezclar con lecturas."
+    correcta: 1
+  - pregunta: "En un bucle con 30 elementos que lee `scrollHeight` y crea un botón cada vez, ¿cuántos reflows fuerza en el peor caso?"
+    opciones:
+      - "Uno solo, al final del bucle."
+      - "Dos: uno por lectura agrupada y otro al final."
+      - "Uno por iteración: 30. La escritura anterior invalida el layout que la siguiente lectura obliga a recalcular."
+      - "Cero: el navegador reordena las operaciones automáticamente."
+      - "Depende del framework CSS que uses."
+    correcta: 2
+---
+
+import Solucion from "../../components/Solucion.astro";
+
+## El problema
+
+Tienes varios resúmenes en una página. Quieres añadir un botón "Leer
+más" a los que tengan texto oculto por overflow. Lo obvio: recorrer
+todos, comprobar si `scrollHeight > clientHeight` (que indica que hay
+texto que no cabe), y si es así, crear el botón e insertarlo.
+
+Funciona. Y en 30 resúmenes se nota que va lento, aunque el código
+parece trivial. El problema tiene nombre: **layout thrashing**. Leer
+propiedades como `scrollHeight` obliga al navegador a recalcular
+layout ahí mismo, en medio de tu script, antes de devolverte el
+número. Si has escrito al DOM justo antes (insertar un botón cuenta),
+esa escritura invalida el layout previo, y la próxima lectura fuerza
+otro recálculo. Uno por vuelta. En 30 iteraciones, 30 reflows.
+
+## El código roto
+
+```javascript
+const resumenes = document.querySelectorAll(".resumen");
+
+resumenes.forEach((resumen) => {
+  if (resumen.scrollHeight > resumen.clientHeight) {
+    const boton = document.createElement("button");
+    boton.textContent = "Leer más";
+    boton.className = "leer-mas";
+    resumen.parentElement.appendChild(boton);
+  }
+});
+```
+
+## Las pistas
+
+- Todas las lecturas primero, todas las escrituras después.
+- Guarda en un array los nodos que necesiten botón durante la fase de lectura.
+- El navegador puede servir un lote de lecturas con un solo reflow.
+
+<Solucion>
+
+```javascript
+const resumenes = document.querySelectorAll(".resumen");
+
+// Lecturas
+const necesitanBoton = [];
+
+resumenes.forEach((resumen) => {
+  // mide aquí y guarda en el array los que tienen texto oculto
+  if (resumen.scrollHeight > resumen.clientHeight) {
+    necesitanBoton.push(resumen);
+  }
+});
+
+// Escrituras
+necesitanBoton.forEach((resumen) => {
+  // crea e inserta aquí el botón
+  const boton = document.createElement("button");
+  boton.textContent = "Leer más";
+  boton.className = "leer-mas";
+  resumen.parentElement.appendChild(boton);
+});
+```
+
+Dos fases, y el ciclo se rompe. En la primera solo hay lecturas
+(`scrollHeight`), y el navegador puede servir todas con un único
+reflow al principio, sin nada que invalide layout entre ellas. En la
+segunda solo hay escrituras (createElement + appendChild), y ninguna
+lectura fuerza al navegador a "detente y recalcula ya". Las
+mutaciones se acumulan y el navegador las aplica cuando el script
+termina.
+
+Propiedades que fuerzan reflow síncrono al leerlas: `offsetWidth`,
+`offsetHeight`, `offsetTop`, `offsetLeft`, `scrollWidth`,
+`scrollHeight`, `scrollTop`, `scrollLeft`, `clientWidth`,
+`clientHeight`, `getBoundingClientRect()`, `getComputedStyle()`. Si
+las llamas después de haber tocado el DOM en el mismo tick, pagas
+un reflow. Si las llamas todas juntas antes de tocar nada, pagas uno.
+
+Este patrón — leer todo, luego escribir todo — es la base de muchas
+librerías de animación y de virtualización de listas. Vale la pena
+tenerlo en la cabeza cada vez que un bucle mezcla `getBoundingClientRect`
+con `appendChild`.
+
+</Solucion>

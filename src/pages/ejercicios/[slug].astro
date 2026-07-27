@@ -1,0 +1,30 @@
+---
+import { getCollection, render } from "astro:content";
+import Articulo from "../../layouts/Articulo.astro";
+import Quiz from "../../components/Quiz";
+import EnAccionCta from "../../components/EnAccionCta.astro";
+
+export async function getStaticPaths() {
+  const entradas = await getCollection("ejercicios");
+  return entradas.map((entrada) => ({
+    params: { slug: entrada.id },
+    props: { entrada },
+  }));
+}
+
+const { entrada } = Astro.props;
+const { Content } = await render(entrada);
+---
+
+<Articulo
+  titulo={entrada.data.titulo}
+  resumen={entrada.data.resumen}
+  categoria={entrada.data.categoria}
+  minutos={entrada.data.minutos}
+  dificultad={entrada.data.dificultad}
+  conceptos={entrada.data.conceptos}
+>
+  <Content />
+  <EnAccionCta slug={entrada.id} />
+  <Quiz preguntas={entrada.data.quiz} client:visible />
+</Articulo>

@@ -1,0 +1,93 @@
+/*
+ * Fuentes self-hosted y estilos base de texto.
+ * Los .woff2 se colocan en public/fonts/ (pendiente descargar).
+ * Mientras no estén, el font-stack cae al system-ui equivalente.
+ */
+
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("/fonts/BricolageGrotesque-Variable.woff2") format("woff2-variations");
+  font-weight: 200 800;
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/Inter-Variable.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/JetBrainsMono-Variable.woff2") format("woff2-variations");
+  font-weight: 100 800;
+  font-display: swap;
+  font-style: normal;
+}
+
+html {
+  font-family: var(--fuente-texto);
+  font-size: 100%;
+  line-height: var(--lh-largo);
+  color: var(--texto);
+  background: var(--fondo);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--fuente-display);
+  font-weight: 600;
+}
+
+h1 {
+  font-size: var(--paso-5);
+  line-height: var(--lh-corto);
+}
+h2 {
+  font-size: var(--paso-4);
+  line-height: var(--lh-corto);
+}
+h3 {
+  font-size: var(--paso-3);
+  line-height: var(--lh-medio);
+}
+h4 {
+  font-size: var(--paso-2);
+  line-height: var(--lh-medio);
+}
+
+p,
+li {
+  font-size: var(--paso-0);
+  line-height: var(--lh-largo);
+  max-width: var(--col-prosa);
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--fuente-mono);
+  font-size: var(--paso-00);
+}
+
+pre {
+  line-height: var(--lh-medio);
+  max-width: var(--col-codigo);
+  overflow-x: auto;
+}
+
+small {
+  font-size: var(--paso-00);
+  line-height: var(--lh-suelto);
+}
+
+:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}

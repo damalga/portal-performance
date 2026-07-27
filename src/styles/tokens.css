@@ -1,0 +1,70 @@
+/*
+ * Tokens del sistema. Fuente única para color, tipografía, espaciado y radio.
+ * Ningún componente debe usar hex, rgb() ni valores mágicos: siempre var(--...).
+ */
+
+:root {
+  /* Paleta base (5 valores, cf. SETUP.md §6) */
+  --amarillo: #ffff00;
+  --azul: #0000ff;
+  --tinta: #0a0a0a;
+  --papel: #f5f5f5;
+  --publi: rgba(255, 255, 255, 0.04);
+
+  /* Roles semánticos (alias, no color nuevo) */
+  --fondo: var(--papel);
+  --texto: var(--tinta);
+  --acento: var(--azul);
+  --destacado: var(--amarillo);
+  --hueco-publi: var(--publi);
+
+  /* Familias tipográficas */
+  --fuente-display: "Bricolage Grotesque", system-ui, sans-serif;
+  --fuente-texto: "Inter", system-ui, sans-serif;
+  --fuente-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* Escala tipográfica fluida (major third, base 16px) */
+  --paso-000: clamp(0.7rem, 0.68rem + 0.1vw, 0.75rem);
+  --paso-00: clamp(0.82rem, 0.8rem + 0.15vw, 0.875rem);
+  --paso-0: 1rem;
+  --paso-1: clamp(1.15rem, 1.1rem + 0.3vw, 1.25rem);
+  --paso-2: clamp(1.4rem, 1.3rem + 0.5vw, 1.563rem);
+  --paso-3: clamp(1.7rem, 1.55rem + 0.8vw, 1.953rem);
+  --paso-4: clamp(2.05rem, 1.85rem + 1.1vw, 2.441rem);
+  --paso-5: clamp(2.5rem, 2.2rem + 1.7vw, 3.052rem);
+  --paso-6: clamp(3.2rem, 2.6rem + 3.2vw, 4.768rem);
+
+  /* Interlineados (decrecen al subir el tamaño) */
+  --lh-tight: 1.05;
+  --lh-corto: 1.15;
+  --lh-medio: 1.35;
+  --lh-largo: 1.6;
+  --lh-suelto: 1.8;
+
+  /* Escala de espaciado (t-shirt, ratio ~fibonacci) */
+  --esp-2xs: 0.25rem;
+  --esp-xs: 0.5rem;
+  --esp-sm: 0.75rem;
+  --esp-md: 1rem;
+  --esp-lg: 1.5rem;
+  --esp-xl: 2.5rem;
+  --esp-2xl: 4rem;
+  --esp-3xl: 6.5rem;
+
+  /* Ancho máximo de columna de lectura */
+  --col-prosa: 65ch;
+  --col-codigo: 78ch;
+
+  /* Radios */
+  --radio-sm: 2px;
+  --radio-md: 6px;
+  --radio-lg: 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: var(--tinta);
+    --texto: var(--papel);
+    /* --acento y --destacado no cambian: puros a saturación máxima en ambos temas */
+  }
+}

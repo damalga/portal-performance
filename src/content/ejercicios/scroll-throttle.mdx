@@ -7,51 +7,52 @@ conceptos: ["throttle", "requestAnimationFrame", "scroll"]
 quiz:
   - pregunta: "¿Por qué debounce no vale para actualizar una barra de progreso de scroll?"
     opciones:
-      - "Porque debounce solo funciona con eventos de teclado."
+      - "Porque debounce está diseñado para eventos de teclado y no puede escuchar el evento `scroll` del navegador."
+      - "Porque `setTimeout` interfiere con el hilo del scroll y bloquea el gesto del usuario en móvil."
+      - "Porque el navegador ignora los cambios a `style.width` mientras dura el scroll activo."
       - "Porque debounce solo dispara cuando la actividad para, y aquí la barra tiene que moverse mientras el usuario hace scroll."
-      - "Porque `setTimeout` interfiere con el hilo del scroll."
-      - "Porque el navegador ignora los cambios a `style.width` durante scroll."
-      - "Porque debounce se implementa con `requestAnimationFrame`, no con `setTimeout`."
-    correcta: 1
+      - "Porque debounce se implementa siempre con `requestAnimationFrame`, y `setTimeout` no encaja."
+    correcta: 3
   - pregunta: "¿Cuál es la diferencia entre throttle y `requestAnimationFrame` para este caso?"
     opciones:
-      - "Ninguna: los dos limitan a un ritmo fijo."
       - "Throttle deja pasar cada X ms sin importar el refresh rate; `requestAnimationFrame` se alinea con cada frame que el navegador va a pintar, ni uno de más ni de menos."
-      - "`requestAnimationFrame` es más lento porque espera al compositor."
-      - "Throttle usa promesas, `requestAnimationFrame` usa callbacks."
-      - "`requestAnimationFrame` solo funciona en canvas."
-    correcta: 1
+      - "Ninguna en la práctica: los dos limitan a un ritmo fijo y son intercambiables en cualquier situación."
+      - "`requestAnimationFrame` es más lento porque tiene que esperar a que el compositor libere la GPU."
+      - "Throttle usa promesas y espera con `await`; `requestAnimationFrame` usa callbacks tradicionales al estilo Node."
+      - "`requestAnimationFrame` solo funciona con elementos `<canvas>` y no sirve para modificar el DOM normal."
+    correcta: 0
   - pregunta: "¿Qué gana usar `requestAnimationFrame` frente a `setTimeout(cb, 16)` para trabajo visual?"
     opciones:
-      - "Nada, el navegador los trata igual."
-      - "Se sincroniza con el ciclo de repintado del navegador y se pausa automáticamente cuando la pestaña no es visible."
-      - "Es un API síncrono y por eso responde antes."
-      - "Puede ejecutarse en un worker."
-      - "Devuelve una promesa que resuelve al terminar el frame."
-    correcta: 1
+      - "Nada relevante: el navegador los trata exactamente igual bajo el capó y el rendimiento es equivalente."
+      - "Que es un API estrictamente síncrono y por eso responde antes que cualquier alternativa asíncrona."
+      - "Que puede ejecutarse en un `Worker` y por eso no bloquea al hilo principal durante el trabajo pesado."
+      - "Que devuelve una promesa que resuelve justo al terminar el frame, encajable con `async/await`."
+      - "Que se sincroniza con el ciclo de repintado del navegador y se pausa automáticamente cuando la pestaña no es visible."
+    correcta: 4
   - pregunta: "¿Qué problema tiene la versión throttle con bandera y `setTimeout(fn, 200)` para una barra de progreso?"
     opciones:
-      - "Ninguno, es la solución óptima."
+      - "Ninguno digno de mención: es la solución óptima para todos los casos de scroll visual."
       - "Si el usuario para de golpe en un punto entre disparos, la barra puede quedarse desactualizada porque el último tick no se ejecuta."
-      - "La bandera queda bloqueada permanentemente si el usuario cambia de pestaña."
-      - "El `clearTimeout` no funciona con throttle."
-      - "El evento scroll deja de emitirse tras el primer throttle."
+      - "La bandera queda bloqueada permanentemente si el usuario cambia de pestaña antes del `setTimeout`."
+      - "El `clearTimeout` no funciona con el patrón throttle porque solo aplica a debounce clásico."
+      - "El evento `scroll` deja de emitirse tras el primer disparo del throttle, hasta que se recargue la página."
     correcta: 1
   - pregunta: "El listener de scroll del código roto puede dispararse cien veces por segundo. ¿Qué implica en la práctica?"
     opciones:
-      - "Que el navegador colapsa y el scroll se congela."
+      - "Que el navegador colapsa y el scroll se congela por completo mientras dura el gesto."
+      - "Que la memoria crece indefinidamente porque cada disparo registra un nuevo listener en el árbol."
       - "Que cada disparo hace `scrollHeight` (que fuerza layout), calcula el porcentaje y escribe en style, con coste que se suma frame a frame y roba tiempo al scroll suave."
-      - "Que la memoria crece indefinidamente por los listeners registrados."
-      - "Que `scrollY` devuelve valores incorrectos por la contención."
-      - "Nada relevante en hardware moderno."
-    correcta: 1
+      - "Que `window.scrollY` devuelve valores incorrectos por la contención de accesos en el mismo tick."
+      - "Nada especialmente relevante en hardware moderno; los procesadores actuales absorben el coste sin problema."
+    correcta: 2
 ---
 
 import Solucion from "../../components/Solucion.astro";
+import DemoScrollThrottle from "../../components/demos/DemoScrollThrottle.astro";
 
 ## El problema
 
-Una barra de progreso de lectura en la cabecera. Cada vez que el
+Una barra de progreso de lectura. Cada vez que el
 usuario hace scroll, calculas qué porcentaje del artículo ha visto y
 pintas el ancho de la barra. Simple.
 
@@ -139,3 +140,5 @@ Este es el script que gobierna la barra de progreso real del sitio, si
 te fijas en la parte de arriba.
 
 </Solucion>
+
+<DemoScrollThrottle />

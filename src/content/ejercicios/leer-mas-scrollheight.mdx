@@ -7,12 +7,12 @@ conceptos: ["layout thrashing", "reflow forzado síncrono", "scrollHeight"]
 quiz:
   - pregunta: "¿Qué es un “reflow forzado síncrono”?"
     opciones:
-      - "Un tipo de animación CSS que no se puede optimizar."
+      - "Un tipo especial de animación CSS declarativa que el navegador no puede optimizar en la capa de compositor."
+      - "El evento que el DOM emite cuando termina un repaint, útil para saber que las mutaciones ya están en pantalla."
+      - "El bloqueo del hilo principal que ocurre cuando hay demasiados listeners registrados sobre el mismo elemento."
+      - "Un modo interno del navegador que sirve para depurar layouts complejos y encontrar reflows innecesarios."
       - "Cuando JavaScript pide una medida del layout (scrollHeight, offsetWidth...) obligando al navegador a recalcular ahí mismo las mutaciones pendientes, en vez de esperar al final del script."
-      - "El evento que emite el DOM cuando termina un repaint."
-      - "El bloqueo del hilo principal cuando hay demasiados listeners."
-      - "Un modo del navegador para depurar layouts complejos."
-    correcta: 1
+    correcta: 4
   - pregunta: "¿Cuál de estas propiedades fuerza reflow síncrono al leerse?"
     opciones:
       - "`textContent`"
@@ -23,28 +23,28 @@ quiz:
     correcta: 2
   - pregunta: "¿Qué es el “layout thrashing”?"
     opciones:
-      - "Cuando el navegador se queda sin memoria RAM para el layout."
       - "El patrón de alternar lecturas y escrituras al DOM en un bucle, provocando N reflows síncronos donde bastaría con uno o dos."
-      - "Un fallo del compositor cuando hay demasiadas capas."
-      - "La contención entre event loop y garbage collector."
-      - "Una técnica antigua de animación que ya no se usa."
-    correcta: 1
+      - "Cuando el navegador se queda sin memoria RAM disponible para almacenar el árbol de layout completo."
+      - "Un fallo del compositor cuando hay demasiadas capas GPU acumuladas en una misma página."
+      - "La contención entre el event loop y el garbage collector cuando ambos compiten por el mismo hilo."
+      - "Una técnica antigua de animación que ya no se usa, sustituida por CSS transitions modernas."
+    correcta: 0
   - pregunta: "¿Por qué la solución separa lecturas y escrituras en dos bucles?"
     opciones:
-      - "Porque `forEach` no permite dos operaciones en el mismo callback."
+      - "Porque `forEach` no permite realizar dos operaciones distintas dentro del mismo callback sin romper la iteración."
+      - "Porque el hilo principal no puede leer y escribir al DOM en la misma vuelta del event loop sin generar contención."
+      - "Porque `document.createElement` bloquea las lecturas de layout siguientes hasta que el nodo se inserta en el árbol."
       - "Porque agrupar todas las lecturas primero permite al navegador reflowar una sola vez para servirlas, y luego las escrituras se aplican sin obligar a más medidas."
-      - "Porque el hilo principal no puede leer y escribir en la misma vuelta del event loop."
-      - "Porque `document.createElement` bloquea las lecturas de layout siguientes."
-      - "Porque las escrituras son asíncronas y no se pueden mezclar con lecturas."
-    correcta: 1
+      - "Porque las escrituras al DOM son asíncronas por defecto y no se pueden mezclar con lecturas síncronas de layout."
+    correcta: 3
   - pregunta: "En un bucle con 30 elementos que lee `scrollHeight` y crea un botón cada vez, ¿cuántos reflows fuerza en el peor caso?"
     opciones:
-      - "Uno solo, al final del bucle."
-      - "Dos: uno por lectura agrupada y otro al final."
+      - "Uno solo, al final del bucle, cuando el script termina y el navegador aplica las mutaciones."
       - "Uno por iteración: 30. La escritura anterior invalida el layout que la siguiente lectura obliga a recalcular."
-      - "Cero: el navegador reordena las operaciones automáticamente."
-      - "Depende del framework CSS que uses."
-    correcta: 2
+      - "Dos en total: uno por la lectura agrupada al inicio y otro al final por las escrituras acumuladas."
+      - "Cero: los navegadores modernos reordenan automáticamente las operaciones para minimizar reflows."
+      - "Depende del framework CSS que uses y de si aplica `contain: layout` a los contenedores."
+    correcta: 1
 ---
 
 import Solucion from "../../components/Solucion.astro";

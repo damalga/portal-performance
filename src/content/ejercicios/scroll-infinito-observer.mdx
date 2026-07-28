@@ -7,43 +7,43 @@ conceptos: ["IntersectionObserver", "rootMargin", "condición de carrera", "inse
 quiz:
   - pregunta: "¿Qué ventaja tiene IntersectionObserver frente a un listener de scroll para detectar si un centinela está en pantalla?"
     opciones:
-      - "Es más rápido porque usa un worker."
       - "El navegador optimiza la detección internamente y avisa solo cuando cambia el estado de visibilidad, evitando cientos de disparos por segundo."
-      - "Funciona en más navegadores que scroll."
-      - "Permite escuchar en varios elementos con un solo `addEventListener`."
-      - "Es un API síncrono, mientras que scroll es asíncrono."
-    correcta: 1
+      - "Es más rápido porque usa un `Worker` aparte y no bloquea nunca al hilo principal del navegador."
+      - "Funciona en más navegadores que el evento `scroll`, especialmente en versiones antiguas de Safari y Chrome."
+      - "Permite escuchar cambios en varios elementos con una sola llamada a `addEventListener`, en lugar de una por elemento."
+      - "Es un API síncrono, mientras que el evento `scroll` es asíncrono y por eso tarda en llegar al handler."
+    correcta: 0
   - pregunta: "¿Para qué sirve `rootMargin` en IntersectionObserver?"
     opciones:
-      - "Para forzar un margen CSS al elemento observado."
+      - "Para forzar un margen CSS al elemento observado, empujando visualmente los elementos vecinos que lo rodean."
+      - "Para limitar cuántas veces el observer puede llegar a dispararse a lo largo de la vida de la página."
+      - "Para hacer que el observer ignore los cambios de tamaño de la ventana del navegador al redimensionar."
+      - "Para controlar el `z-index` del elemento observado respecto a los elementos que se solapan con él."
       - "Para ampliar (o reducir) el área efectiva del viewport para la detección, disparando el observer antes de que el centinela sea visible."
-      - "Para limitar cuántas veces el observer puede dispararse."
-      - "Para ignorar los cambios de tamaño de ventana."
-      - "Para controlar el z-index del elemento."
-    correcta: 1
+    correcta: 4
   - pregunta: "¿Por qué hace falta la bandera `cargando` aunque uses IntersectionObserver?"
     opciones:
-      - "No hace falta, IntersectionObserver ya evita disparos concurrentes."
+      - "No hace falta en absoluto: IntersectionObserver ya evita disparos concurrentes de forma automática por diseño."
+      - "Porque IntersectionObserver no funciona correctamente en Safari sin una bandera explícita que gate los disparos."
       - "Porque mientras la primera petición está en vuelo el usuario puede seguir haciendo scroll y el observer disparar de nuevo, lanzando peticiones duplicadas para la misma página."
-      - "Porque IntersectionObserver no funciona en Safari sin ella."
-      - "Para forzar al navegador a pausar el scroll durante el fetch."
-      - "Para que `siguientePagina` se incremente correctamente."
-    correcta: 1
+      - "Para forzar al navegador a pausar el scroll del usuario mientras dura el fetch de la página siguiente."
+      - "Para que la variable `siguientePagina` se incremente correctamente sin saltarse ningún número intermedio."
+    correcta: 2
   - pregunta: "¿Por qué bajar la bandera `cargando` en `.finally()` y no en `.then()`?"
     opciones:
-      - "Porque `.then` no acepta funciones que modifiquen variables externas."
+      - "Porque `.then` no acepta funciones que modifiquen variables externas al scope de la cadena de promesas."
+      - "Porque `.finally` se ejecuta antes que `.then` en la cadena y por eso llega a tiempo de bajar la bandera."
+      - "Porque `.finally` cachea internamente el resultado de la petición y `.then` en cambio no lo hace."
       - "Porque si la petición falla y solo la bajas en `.then`, la bandera queda a `true` y el scroll infinito se rompe: nunca vuelve a cargar."
-      - "Porque `.finally` se ejecuta antes que `.then` y llega a tiempo."
-      - "Porque `.finally` cachea el resultado y `.then` no."
-      - "Porque `.then` solo funciona con promesas resueltas por `fetch`."
-    correcta: 1
+      - "Porque `.then` solo funciona con promesas resueltas específicamente por `fetch` y no por otras APIs."
+    correcta: 3
   - pregunta: '¿Por qué `insertAdjacentHTML("beforeend", ...)` es mejor que `innerHTML += ...` para añadir contenido al final?'
     opciones:
-      - "Porque `insertAdjacentHTML` es más nuevo y mejor optimizado en general."
+      - "Porque `insertAdjacentHTML` es un API más nuevo y por eso está mejor optimizado en general por todos los motores."
       - "Porque `insertAdjacentHTML` parsea solo el fragmento nuevo, mientras que `+=` serializa todo el contenido existente, lo concatena y lo reparsea entero."
-      - "Porque `+=` no funciona con etiquetas `<article>`."
-      - "Porque `insertAdjacentHTML` sanitiza automáticamente contra XSS."
-      - "Porque `+=` provoca layout thrashing y `insertAdjacentHTML` no."
+      - "Porque `+=` no funciona correctamente con etiquetas semánticas de HTML5 como `<article>` o `<section>`."
+      - "Porque `insertAdjacentHTML` sanitiza automáticamente el HTML contra XSS antes de insertarlo en el DOM."
+      - "Porque `+=` provoca layout thrashing en cada uso, mientras que `insertAdjacentHTML` lo evita por diseño."
     correcta: 1
 ---
 

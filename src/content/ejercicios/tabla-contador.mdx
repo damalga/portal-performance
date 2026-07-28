@@ -7,12 +7,12 @@ conceptos: ["debounce", "batching", "trabajo dentro del bucle"]
 quiz:
   - pregunta: "¿Por qué actualizar `contador.textContent` dentro del bucle es un problema?"
     opciones:
-      - "Porque el DOM no permite modificar dos nodos en el mismo tick."
+      - "Porque el DOM no permite modificar dos nodos distintos en el mismo tick del event loop."
+      - "Porque `textContent` es notablemente más lento que `innerText` en los navegadores modernos."
+      - "Porque `forEach` no permite side effects según la especificación estricta del lenguaje."
+      - "Porque el contador se queda desactualizado si el usuario sigue tecleando antes de terminar."
       - "Porque cada escritura es una modificación al DOM que se hace N veces cuando el total se puede calcular una sola vez con `.length`."
-      - "Porque `textContent` es más lento que `innerText` en navegadores modernos."
-      - "Porque `forEach` no permite side effects según la especificación."
-      - "Porque el contador queda desactualizado si el usuario sigue tecleando."
-    correcta: 1
+    correcta: 4
   - pregunta: "¿Qué propiedad usarías para obtener el total del filtro directamente, sin llevar cuenta manual?"
     opciones:
       - "`filtrados.count`"
@@ -23,27 +23,27 @@ quiz:
     correcta: 2
   - pregunta: "¿Por qué combinar debounce con `tbody.innerHTML = ...` funciona bien aquí?"
     opciones:
-      - "Porque `innerHTML` se ejecuta en microtask y no bloquea."
       - 'Porque el debounce garantiza que la reasignación se hace una sola vez tras el input, y `.map().join("")` construye el string entero para pintarlo de golpe.'
-      - "Porque `tbody` es un elemento especial que el navegador optimiza."
-      - "Porque el bucle interno se paraleliza al usar `map`."
-      - "Porque el navegador solo repinta si el HTML resultante cambia."
-    correcta: 1
-  - pregunta: "El código roto no tiene innerHTML `+=`, tiene innerHTML `+=` dentro del bucle. ¿Qué implica?"
+      - "Porque `innerHTML` se ejecuta internamente en un microtask y no llega a bloquear el hilo principal."
+      - "Porque `tbody` es un elemento especial que el navegador optimiza de forma diferente al resto."
+      - "Porque el bucle interno se paraleliza automáticamente al usar `map` en lugar de `forEach`."
+      - "Porque el navegador solo repinta el área afectada si el HTML resultante ha cambiado de verdad."
+    correcta: 0
+  - pregunta: "El código roto tiene `innerHTML +=` dentro del bucle. ¿Qué implica eso?"
     opciones:
-      - "Que el navegador ignora las asignaciones intermedias y solo aplica la última."
+      - "Que el navegador ignora las asignaciones intermedias y solo aplica la última del bucle."
+      - "Que el DOM no ve los cambios hasta que termina el bucle porque las modificaciones se acumulan en memoria."
+      - "Que las filas quedan sin estilo porque el navegador no aplica CSS a nodos nuevos creados así."
       - "Que cada iteración serializa y reparsea el HTML del `tbody` entero, con coste creciente conforme se llena."
-      - "Que el DOM no ve los cambios hasta que termina el bucle."
-      - "Que las filas quedan sin estilo porque el navegador no aplica CSS a nodos nuevos."
-      - "Que `forEach` bloquea el hilo hasta que termina."
-    correcta: 1
+      - "Que `forEach` bloquea el hilo principal hasta que termina y por eso se nota lento."
+    correcta: 3
   - pregunta: "¿Cuál es el principio general que enseña este ejercicio?"
     opciones:
-      - "Nunca uses `forEach`, siempre `for` clásico."
+      - "Nunca uses `forEach` en JavaScript; el bucle `for` clásico es siempre la opción más eficiente."
       - "El trabajo que se puede hacer una sola vez fuera del bucle no tiene por qué repetirse en cada iteración."
-      - "El DOM es rápido si se accede desde un microtask."
-      - "Los contadores en la UI siempre deben ir en un componente separado."
-      - "Las tablas son un caso especial que exige batching manual."
+      - "El DOM es rápido de acceder siempre que se haga desde dentro de un microtask con `queueMicrotask`."
+      - "Los contadores que se muestran en la UI siempre deben ir aislados en un componente separado."
+      - "Las tablas HTML son un caso especial que exige batching manual con `DocumentFragment`."
     correcta: 1
 ---
 

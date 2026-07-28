@@ -1,0 +1,340 @@
+---
+import Nota from "../Nota.astro";
+---
+
+<section id="demo-scroll-throttle" class="demo-panel" aria-labelledby="demo-scroll-throttle-titulo">
+  <header class="demo-titulo">
+    <span class="demo-etiqueta">Pruébalo</span>
+    <h3 id="demo-scroll-throttle-titulo">Scroll sin control vs con <code>requestAnimationFrame</code></h3>
+  </header>
+
+  <p class="demo-intro">
+    Dos contenedores con las mismas 200 líneas. El modo <em>sin throttle</em> llama al
+    listener en cada evento <code>scroll</code> — decenas o cientos de veces por
+    segundo — y cada llamada lee <code>scrollHeight</code> (forzando layout) y
+    escribe <code>style.width</code>. El modo <em>con rAF</em> deja al navegador
+    marcar el ritmo: una ejecución por frame, ni una de más. Scrollea con el ratón
+    o con la rueda y mira la stat <strong>"Updates a la barra"</strong>: es la
+    métrica que revela la diferencia.
+  </p>
+
+  <Nota tipo="info">
+    <p>
+      Aunque el listener con rAF se dispare igual de veces que la versión rota,
+      solo la primera dispara por frame hace trabajo real (leer layout + escribir
+      style). Las demás salen inmediatamente por la bandera <code>pendiente</code>.
+      El navegador acaba haciendo ~60 updates por segundo en lugar de 200.
+    </p>
+  </Nota>
+
+  <div class="demo-controles" role="group" aria-label="Comparativa">
+    <div class="modo-selector" role="tablist" aria-label="Elegir modo">
+      <button
+        type="button"
+        data-modo="roto"
+        class="demo-boton roto"
+        role="tab"
+        aria-selected="false"
+      >
+        Sin throttle
+      </button>
+      <button
+        type="button"
+        data-modo="solucion"
+        class="demo-boton solucion activo"
+        role="tab"
+        aria-selected="true"
+      >
+        Con rAF
+      </button>
+    </div>
+    <button type="button" data-accion="reset" class="demo-boton reset"> Reset </button>
+  </div>
+
+  <div class="panel-resultados" data-modo="solucion">
+    <div class="columna roto">
+      <div class="cabecera-columna">Sin throttle · layout + style en cada scroll</div>
+      <div class="stats-columna" id="demo-scroll-throttle-stats-roto">
+        Disparos: 0 · Updates a la barra: 0
+      </div>
+      <div class="barra-progreso">
+        <div class="fill" id="demo-scroll-throttle-barra-roto"></div>
+      </div>
+      <div
+        class="scroll-contenedor"
+        id="demo-scroll-throttle-scroll-roto"
+        aria-label="Contenedor scrollable sin throttle"
+      >
+      </div>
+    </div>
+    <div class="columna solucion">
+      <div class="cabecera-columna">Con rAF · un update por frame</div>
+      <div class="stats-columna" id="demo-scroll-throttle-stats-solucion">
+        Disparos: 0 · Updates a la barra: 0
+      </div>
+      <div class="barra-progreso">
+        <div class="fill" id="demo-scroll-throttle-barra-solucion"></div>
+      </div>
+      <div
+        class="scroll-contenedor"
+        id="demo-scroll-throttle-scroll-solucion"
+        aria-label="Contenedor scrollable con requestAnimationFrame"
+      >
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  /* Demo interactiva del ejercicio 5 (scroll-throttle).
+   * Dos contenedores scrollables locales, uno por modo. Solo el activo es
+   * visible y por tanto scrolleable, así que sus stats no se contaminan
+   * con las del otro. La diferencia interesante: "Disparos" (cuántas
+   * veces se ejecutó el handler) vs "Updates a la barra" (cuántas veces
+   * se hizo trabajo real). Con rAF, Disparos ≫ Updates. Sin throttle,
+   * son iguales. */
+  type Modo = "roto" | "solucion";
+
+  const seccion = document.getElementById("demo-scroll-throttle");
+  const controles = seccion?.querySelector<HTMLDivElement>(".demo-controles");
+  const panelResultados = seccion?.querySelector<HTMLDivElement>(".panel-resultados");
+  const modoButtons = seccion?.querySelectorAll<HTMLButtonElement>(
+    ".modo-selector button[data-modo]",
+  );
+
+  const contenedorRoto = document.getElementById("demo-scroll-throttle-scroll-roto");
+  const contenedorSolucion = document.getElementById("demo-scroll-throttle-scroll-solucion");
+  const barraRoto = document.getElementById("demo-scroll-throttle-barra-roto");
+  const barraSolucion = document.getElementById("demo-scroll-throttle-barra-solucion");
+  const statsRotoEl = document.getElementById("demo-scroll-throttle-stats-roto");
+  const statsSolucionEl = document.getElementById("demo-scroll-throttle-stats-solucion");
+
+  let modoActivo: Modo = "solucion";
+  let disparosRoto = 0;
+  let updatesRoto = 0;
+  let disparosSolucion = 0;
+  let updatesSolucion = 0;
+
+  function pintarStats(quien: Modo) {
+    const el = quien === "roto" ? statsRotoEl : statsSolucionEl;
+    const disparos = quien === "roto" ? disparosRoto : disparosSolucion;
+    const updates = quien === "roto" ? updatesRoto : updatesSolucion;
+    if (el) el.textContent = `Disparos: ${disparos} · Updates a la barra: ${updates}`;
+  }
+
+  function actualizarBarra(container: HTMLElement, barra: HTMLElement) {
+    // scrollHeight fuerza layout — es la lectura que la versión rota hace en
+    // cada scroll, la que dispara reflow síncrono.
+    const total = container.scrollHeight - container.clientHeight;
+    const porcentaje = total > 0 ? (container.scrollTop / total) * 100 : 0;
+    barra.style.width = porcentaje + "%";
+  }
+
+  // Rota (literal del ejercicio): sin bandera, sin throttle.
+  function handleScrollRoto() {
+    if (!contenedorRoto || !barraRoto) return;
+    disparosRoto++;
+    actualizarBarra(contenedorRoto, barraRoto);
+    updatesRoto++;
+    pintarStats("roto");
+  }
+
+  // Solución (literal): bandera + requestAnimationFrame. El listener sigue
+  // disparándose igual, pero el trabajo se acota a uno por frame.
+  let pendienteSolucion = false;
+  function handleScrollSolucion() {
+    disparosSolucion++;
+    if (pendienteSolucion) {
+      pintarStats("solucion");
+      return;
+    }
+    pendienteSolucion = true;
+    requestAnimationFrame(() => {
+      if (contenedorSolucion && barraSolucion) {
+        actualizarBarra(contenedorSolucion, barraSolucion);
+        updatesSolucion++;
+      }
+      pendienteSolucion = false;
+      pintarStats("solucion");
+    });
+  }
+
+  function poblarContenedor(container: HTMLElement) {
+    // 200 líneas fijas: suficiente para scrollear pero sin inflar la página.
+    const lineas: string[] = [];
+    for (let i = 1; i <= 200; i++) {
+      lineas.push(`<p>Línea ${i}</p>`);
+    }
+    container.innerHTML = lineas.join("");
+  }
+
+  function setModo(nuevo: Modo) {
+    if (nuevo === modoActivo) return;
+    modoActivo = nuevo;
+    panelResultados?.setAttribute("data-modo", nuevo);
+    modoButtons?.forEach((b) => {
+      const esActivo = b.dataset.modo === nuevo;
+      b.classList.toggle("activo", esActivo);
+      b.setAttribute("aria-selected", esActivo ? "true" : "false");
+    });
+  }
+
+  function resetear() {
+    disparosRoto = 0;
+    updatesRoto = 0;
+    disparosSolucion = 0;
+    updatesSolucion = 0;
+    if (contenedorRoto) contenedorRoto.scrollTop = 0;
+    if (contenedorSolucion) contenedorSolucion.scrollTop = 0;
+    if (barraRoto) barraRoto.style.width = "0%";
+    if (barraSolucion) barraSolucion.style.width = "0%";
+    pintarStats("roto");
+    pintarStats("solucion");
+  }
+
+  if (contenedorRoto && contenedorSolucion && controles) {
+    poblarContenedor(contenedorRoto);
+    poblarContenedor(contenedorSolucion);
+    contenedorRoto.addEventListener("scroll", handleScrollRoto);
+    contenedorSolucion.addEventListener("scroll", handleScrollSolucion);
+
+    controles.addEventListener("click", (e) => {
+      const target = e.target as Element;
+      const modoBtn = target?.closest<HTMLButtonElement>(".modo-selector button[data-modo]");
+      if (modoBtn?.dataset.modo) {
+        setModo(modoBtn.dataset.modo as Modo);
+        return;
+      }
+      const accionBtn = target?.closest<HTMLButtonElement>("button[data-accion]");
+      if (accionBtn?.dataset.accion === "reset") resetear();
+    });
+
+    pintarStats("roto");
+    pintarStats("solucion");
+  }
+</script>
+
+<style>
+  /* Selector segmentado de modo (mismo patrón que las demos anteriores). */
+  .modo-selector {
+    display: inline-flex;
+    gap: var(--esp-xs);
+  }
+
+  .modo-selector .demo-boton.roto {
+    background: var(--fondo);
+    color: var(--error);
+    border-color: var(--error);
+  }
+
+  .modo-selector .demo-boton.roto.activo {
+    background: var(--error);
+    color: var(--papel);
+  }
+
+  .modo-selector .demo-boton.solucion {
+    background: var(--fondo);
+    color: var(--acento);
+    border-color: var(--acento);
+  }
+
+  .modo-selector .demo-boton.solucion.activo {
+    background: var(--acento);
+    color: var(--papel);
+  }
+
+  .modo-selector .demo-boton:not(.activo) {
+    opacity: 0.7;
+  }
+
+  /* Solo una columna visible a la vez. */
+  .panel-resultados {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--esp-lg);
+  }
+
+  .panel-resultados[data-modo="roto"] .columna.solucion,
+  .panel-resultados[data-modo="solucion"] .columna.roto {
+    display: none;
+  }
+
+  .columna {
+    display: flex;
+    flex-direction: column;
+    gap: var(--esp-sm);
+    padding: var(--esp-md);
+    border: 2px solid var(--texto);
+    border-radius: var(--radio-md);
+    min-width: 0;
+  }
+
+  .columna.roto {
+    border-color: var(--error);
+  }
+
+  .columna.solucion {
+    border-color: var(--acento);
+  }
+
+  .cabecera-columna {
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-000);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding-bottom: var(--esp-xs);
+    border-bottom: 1px solid currentColor;
+  }
+
+  .columna.roto .cabecera-columna {
+    color: var(--error);
+  }
+
+  .columna.solucion .cabecera-columna {
+    color: var(--acento);
+  }
+
+  .stats-columna {
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-00);
+    color: color-mix(in srgb, var(--texto) 70%, transparent);
+  }
+
+  /* Barra de progreso: sin transition para no enmascarar el trabajo real. */
+  .barra-progreso {
+    height: 6px;
+    background: color-mix(in srgb, var(--texto) 10%, transparent);
+    border-radius: var(--radio-sm);
+    overflow: hidden;
+  }
+
+  .barra-progreso .fill {
+    height: 100%;
+    width: 0%;
+    transition: none;
+  }
+
+  .columna.roto .barra-progreso .fill {
+    background: var(--error);
+  }
+
+  .columna.solucion .barra-progreso .fill {
+    background: var(--acento);
+  }
+
+  .scroll-contenedor {
+    height: 20rem;
+    overflow-y: auto;
+    border: 1px solid color-mix(in srgb, var(--texto) 20%, transparent);
+    border-radius: var(--radio-sm);
+  }
+
+  .scroll-contenedor :global(p) {
+    padding: var(--esp-2xs) var(--esp-sm);
+    margin: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--texto) 8%, transparent);
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-00);
+    max-width: none;
+  }
+</style>

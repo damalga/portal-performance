@@ -7,43 +7,43 @@ conceptos: ["delegación", "burbujeo", "closest"]
 quiz:
   - pregunta: "¿Qué problema hay con registrar un listener por cada botón?"
     opciones:
-      - "Que el DOM no permite más de 100 listeners activos."
-      - "Que cada listener ocupa memoria y hay que registrarlos otra vez cuando se añaden botones nuevos dinámicamente."
-      - "Que `forEach` no soporta callbacks asíncronos."
-      - "Que `addEventListener` se vuelve lento después del quinto registro."
-      - "Que los listeners no funcionan en `querySelectorAll` sin `for` clásico."
-    correcta: 1
+      - "Que el DOM no permite tener más de 100 listeners activos simultáneamente sin protestar en consola."
+      - "Que `forEach` no soporta callbacks asíncronos ni handlers que hagan `await` dentro del cuerpo."
+      - "Que `addEventListener` se vuelve notablemente más lento a partir del quinto registro sobre el mismo tipo."
+      - "Que los listeners no funcionan en el resultado de `querySelectorAll` sin envolverlo con un `for` clásico."
+      - "Que cada listener ocupa memoria y hay que registrarlos otra vez cuando se añaden botones nuevos dinámicamente al DOM."
+    correcta: 4
   - pregunta: "¿En qué consiste la delegación de eventos?"
     opciones:
-      - "En emitir eventos desde JavaScript hacia el HTML manualmente."
       - "En registrar un único listener en un contenedor padre y usar el burbujeo del evento para identificar qué hijo lo disparó."
-      - "En delegar a un service worker el manejo de eventos del DOM."
-      - "En agrupar listeners en un array y ejecutarlos secuencialmente."
-      - "En usar `dispatchEvent` para reenviar eventos entre elementos."
-    correcta: 1
+      - "En emitir eventos desde JavaScript hacia elementos HTML manualmente para simular acciones del usuario."
+      - "En delegar a un service worker el manejo de todos los eventos del DOM de la aplicación."
+      - "En agrupar los listeners en un array y ejecutarlos secuencialmente cuando llega un evento cualquiera."
+      - "En usar `dispatchEvent` para reenviar eventos entre elementos hermanos del árbol del DOM."
+    correcta: 0
   - pregunta: '¿Por qué usar `e.target.closest(".add-to-cart")` en lugar de comparar `e.target` directamente?'
     opciones:
-      - "Porque `closest` es más rápido que `matches`."
+      - "Porque `closest` es intrínsecamente más rápido que `matches` cuando el selector es una clase simple."
+      - "Porque `closest` incluye los eventos de teclado además de los de ratón cuando el botón está enfocado."
       - "Porque si el botón contiene otros elementos (un icono, un span), `e.target` puede ser el hijo interno y no el botón; `closest` sube hasta el ancestro que coincide."
-      - "Porque `e.target` es `undefined` en eventos delegados."
-      - "Porque `closest` incluye los eventos de teclado además de los de ratón."
-      - "Porque `closest` normaliza mayúsculas y minúsculas en las clases CSS."
-    correcta: 1
+      - "Porque `e.target` es `undefined` en eventos que llegan por delegación y hay que usar `closest` para recuperar el destino."
+      - "Porque `closest` normaliza mayúsculas y minúsculas en las clases CSS, mientras que `===` es sensible."
+    correcta: 2
   - pregunta: "¿Qué es el burbujeo de eventos?"
     opciones:
-      - "Un efecto visual de las animaciones CSS."
-      - "El mecanismo por el que un evento disparado en un elemento sube por la cadena de ancestros hasta document, permitiendo que un padre lo intercepte."
-      - "Un patrón para agrupar eventos redundantes."
-      - "La cola de eventos pendientes del event loop."
-      - "El proceso por el que los frameworks agrupan renders en batch."
-    correcta: 1
+      - "Un efecto visual de las animaciones CSS con `transform` que simula el rebote de una burbuja."
+      - "Un patrón de diseño para agrupar eventos redundantes en un solo tick del event loop."
+      - "La cola interna de eventos pendientes que el event loop va procesando en orden de llegada."
+      - "El mecanismo por el que un evento disparado en un elemento sube por la cadena de ancestros hasta `document`, permitiendo que un padre lo intercepte."
+      - "El proceso por el que los frameworks agrupan varios renders en un mismo batch para mejorar rendimiento."
+    correcta: 3
   - pregunta: "En el patrón de delegación, ¿qué hace la guard clause `if (boton)`?"
     opciones:
-      - "Comprueba que el botón está en pantalla antes de responder."
+      - "Comprueba que el botón está visible en el viewport antes de disparar la respuesta del handler."
       - "Comprueba que el click ocurrió realmente sobre un elemento con la clase esperada, ignorando clicks en el resto del contenedor."
-      - "Cachea la referencia al botón para futuras invocaciones."
-      - "Impide que el evento siga burbujeando hacia arriba."
-      - "Espera a que el DOM termine de renderizar antes de actuar."
+      - "Cachea la referencia al botón dentro del scope del handler para futuras invocaciones más rápidas."
+      - "Impide que el evento siga burbujeando hacia arriba por la cadena de ancestros del DOM."
+      - "Espera a que el DOM termine de renderizar completamente antes de actuar sobre el botón."
     correcta: 1
 ---
 

@@ -7,44 +7,44 @@ conceptos: ["optional chaining", "nullish coalescing", "manejo de errores"]
 quiz:
   - pregunta: "¿Qué pasa cuando `user.profile` es `undefined` y ejecutas `user.profile.name`?"
     opciones:
-      - "Devuelve `undefined` silenciosamente y el textContent queda vacío."
       - "Lanza un `TypeError: Cannot read properties of undefined`."
-      - "Devuelve el string 'undefined' y lo pinta como texto."
-      - "El navegador lo interpreta como null y no rompe."
-      - "Depende de si el modo estricto está activo."
-    correcta: 1
+      - "Devuelve `undefined` silenciosamente y el `textContent` queda vacío."
+      - "Devuelve el string `'undefined'` y lo pinta como texto."
+      - "El navegador lo interpreta como `null` y no rompe."
+      - "Depende de si el modo estricto está activo o no."
+    correcta: 0
   - pregunta: "¿Cuál es la diferencia real entre `??` y `||` en JavaScript?"
     opciones:
-      - "Ninguna: son sinónimos y `??` es la forma moderna."
-      - "`||` es más rápido porque no necesita comprobar el tipo."
+      - "Ninguna diferencia: son sinónimos y `??` es simplemente la forma moderna que ha sustituido a `||`."
+      - "`||` es más rápido porque el motor no necesita comprobar el tipo del valor antes de decidir."
+      - "`??` es asíncrono y devuelve una promesa; `||` es síncrono y devuelve el valor directamente."
       - "`||` sustituye cualquier valor falsy (0, '', false); `??` solo sustituye `null` y `undefined`."
-      - "`??` funciona con promesas y `||` no."
-      - "`||` funciona en TypeScript y `??` solo en JavaScript."
-    correcta: 2
+      - "`||` funciona en TypeScript estricto y `??` solo en JavaScript sin tipos."
+    correcta: 3
   - pregunta: "Cargas un producto con `precio: 0`. ¿Qué imprime `producto.precio || 'sin precio'`?"
     opciones:
-      - "`0`, porque `0` es un número válido."
-      - "`'sin precio'`, porque `0` es falsy y `||` lo sustituye."
-      - "`null`, porque el operador cortocircuita antes de evaluar."
-      - "`undefined`, porque el valor por defecto solo aplica a strings."
-      - "Lanza un error porque `||` no acepta números."
-    correcta: 1
+      - "`0`, porque `0` es un número válido y `||` lo respeta."
+      - "`null`, porque el operador cortocircuita antes de evaluar el valor por defecto."
+      - "`undefined`, porque el valor por defecto solo aplica a strings, no a números."
+      - "Lanza un error de tipo porque `||` no acepta operandos numéricos a la izquierda."
+      - "`'sin precio'`, porque `0` es falsy y `||` lo sustituye por el valor de la derecha."
+    correcta: 4
   - pregunta: "¿Por qué añadir `.catch()` en la cadena de `fetch`?"
     opciones:
-      - "Porque `.then` no captura errores lanzados dentro de otro `.then`."
+      - "Porque `.then` no puede capturar errores lanzados dentro de otro `.then` de la misma cadena."
       - "Porque `fetch` no rechaza en errores HTTP como 500, pero sí en fallos de red, y en ambos casos hay que decidir qué hacer con la UI."
-      - "Porque el navegador cancela la petición si no hay `.catch` en 5 segundos."
-      - "Porque sin `.catch` el garbage collector no libera la respuesta."
-      - "Es opcional; JavaScript siempre te avisa en consola aunque no lo pongas."
+      - "Porque el navegador cancela automáticamente la petición si no hay `.catch` declarado en menos de 5 segundos."
+      - "Porque sin `.catch` el recolector de basura no libera nunca el objeto `Response` de la memoria."
+      - "Es opcional: JavaScript siempre te avisa en la consola aunque no lo pongas, y no afecta al flujo."
     correcta: 1
   - pregunta: "El campo `name` era obligatorio por contrato con backend. ¿Qué se hace además de proteger la UI con `??`?"
     opciones:
-      - "Nada más: si la UI no rompe, el trabajo está hecho."
+      - "Nada más: si la UI no rompe visualmente para el usuario, el trabajo del frontend ya está hecho."
+      - "Reintentar la petición en bucle hasta que el backend acabe devolviendo el campo correcto."
       - "Reportar el fallo al backend porque el bug es suyo; el fallback solo evita que la interfaz se caiga mientras tanto."
-      - "Reintentar la petición hasta que llegue el campo."
-      - "Cambiar el schema para marcar `name` como opcional."
-      - "Rellenar el campo automáticamente con el email del usuario."
-    correcta: 1
+      - "Cambiar el schema del frontend para marcar el campo `name` como opcional y así ajustarse a la realidad."
+      - "Rellenar el campo automáticamente con el email del usuario para que siempre haya algo que mostrar."
+    correcta: 2
 ---
 
 import Solucion from "../../components/Solucion.astro";

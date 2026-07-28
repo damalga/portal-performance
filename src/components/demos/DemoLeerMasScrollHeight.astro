@@ -1,0 +1,384 @@
+---
+import Nota from "../Nota.astro";
+---
+
+<section
+  id="demo-leer-mas-scrollheight"
+  class="demo-panel"
+  aria-labelledby="demo-leer-mas-titulo"
+>
+  <header class="demo-titulo">
+    <span class="demo-etiqueta">Pruébalo</span>
+    <h3 id="demo-leer-mas-titulo">
+      Alternar lectura + escritura vs dos fases separadas
+    </h3>
+  </header>
+
+  <p class="demo-intro">
+    El script se ejecuta de golpe sobre N resúmenes con texto cortado por
+    overflow. En modo <em>alternado</em>, cada iteración lee
+    <code>scrollHeight</code> (forzando reflow tras la escritura anterior) y
+    después inserta un botón <code>Leer más</code>: N reflows forzados. En modo
+    <em>dos fases</em>, primero se leen todos los <code>scrollHeight</code> (un
+    solo reflow al empezar) y después se escriben todos los botones sin lecturas
+    intercaladas.
+  </p>
+
+  <Nota tipo="info">
+    <p>
+      La diferencia en <strong>ms de reloj</strong> puede ser modesta en
+      hardware moderno con pocos elementos (el navegador batchea agresivamente
+      cuando puede). La stat <strong>Reflows forzados</strong> es la que
+      realmente cuenta: N vs 1, por construcción. Sube el contador a 1.000 y
+      abre la pestaña Performance para ver la línea de <em>Layout</em>
+      llenándose de barras en el modo alternado.
+    </p>
+  </Nota>
+
+  <div class="demo-controles" role="group" aria-label="Comparativa">
+    <div class="modo-selector" role="tablist" aria-label="Elegir modo">
+      <button
+        type="button"
+        data-modo="roto"
+        class="demo-boton roto"
+        role="tab"
+        aria-selected="false"
+      >
+        Alternado (roto)
+      </button>
+      <button
+        type="button"
+        data-modo="solucion"
+        class="demo-boton solucion activo"
+        role="tab"
+        aria-selected="true"
+      >
+        Dos fases (solución)
+      </button>
+    </div>
+    <label class="demo-cantidad">
+      <span>Resúmenes</span>
+      <select id="demo-leer-mas-cantidad">
+        <option value="100">100</option>
+        <option value="500" selected>500</option>
+        <option value="1000">1.000</option>
+      </select>
+    </label>
+    <button type="button" data-accion="ejecutar" class="demo-boton anadir">
+      Ejecutar
+    </button>
+    <button type="button" data-accion="reset" class="demo-boton reset"> Reset </button>
+  </div>
+
+  <div class="panel-resultados" data-modo="solucion">
+    <div class="columna roto">
+      <div class="cabecera-columna">Alternado · scrollHeight y appendChild en cada vuelta</div>
+      <div class="stats-columna" id="demo-leer-mas-stats-roto">
+        Pulsa Ejecutar para medir
+      </div>
+      <div
+        class="contenedor-resumenes"
+        id="demo-leer-mas-contenedor-roto"
+        aria-label="Resúmenes con botones insertados en modo alternado"
+      >
+      </div>
+    </div>
+    <div class="columna solucion">
+      <div class="cabecera-columna">Dos fases · todo leer, luego todo escribir</div>
+      <div class="stats-columna" id="demo-leer-mas-stats-solucion">
+        Pulsa Ejecutar para medir
+      </div>
+      <div
+        class="contenedor-resumenes"
+        id="demo-leer-mas-contenedor-solucion"
+        aria-label="Resúmenes con botones insertados en modo dos fases"
+      >
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  /* Demo interactiva del ejercicio 7 (leer-mas-scrollheight).
+   * One-shot: al pulsar Ejecutar se regeneran N resúmenes en el
+   * contenedor del modo activo y se corre el script correspondiente.
+   * La stat "Reflows forzados" es teórica: N en roto (una lectura de
+   * scrollHeight después de cada escritura anterior invalida layout),
+   * 1 en solución (todas las lecturas seguidas se sirven con un solo
+   * cómputo de layout, las escrituras posteriores no obligan a más). */
+  type Modo = "roto" | "solucion";
+
+  const TEXTO =
+    "Este es un resumen suficientemente largo como para que scrollHeight " +
+    "sea mayor que clientHeight cuando aplicamos max-height con overflow " +
+    "hidden. El script comprueba esa condición y decide si insertar un " +
+    "botón de leer más para expandir el contenido oculto al usuario.";
+
+  const seccion = document.getElementById("demo-leer-mas-scrollheight");
+  const cantidadSelector = document.getElementById(
+    "demo-leer-mas-cantidad",
+  ) as HTMLSelectElement | null;
+  const controles = seccion?.querySelector<HTMLDivElement>(".demo-controles");
+  const panelResultados = seccion?.querySelector<HTMLDivElement>(".panel-resultados");
+  const modoButtons = seccion?.querySelectorAll<HTMLButtonElement>(
+    ".modo-selector button[data-modo]",
+  );
+  const contenedorRoto = document.getElementById("demo-leer-mas-contenedor-roto");
+  const contenedorSolucion = document.getElementById("demo-leer-mas-contenedor-solucion");
+  const statsRotoEl = document.getElementById("demo-leer-mas-stats-roto");
+  const statsSolucionEl = document.getElementById("demo-leer-mas-stats-solucion");
+
+  let modoActivo: Modo = "solucion";
+
+  function generarResumenes(container: HTMLElement, cantidad: number) {
+    const items: string[] = [];
+    for (let i = 0; i < cantidad; i++) {
+      items.push(`<div class="tarjeta-resumen"><p class="resumen">${TEXTO}</p></div>`);
+    }
+    container.innerHTML = items.join("");
+  }
+
+  // Roto (literal del ejercicio): alterna lectura de scrollHeight y appendChild.
+  function ejecutarRoto(container: HTMLElement) {
+    const resumenes = container.querySelectorAll<HTMLElement>(".resumen");
+    const t0 = performance.now();
+    let botones = 0;
+    resumenes.forEach((resumen) => {
+      if (resumen.scrollHeight > resumen.clientHeight) {
+        const boton = document.createElement("button");
+        boton.textContent = "Leer más";
+        boton.className = "leer-mas";
+        resumen.parentElement?.appendChild(boton);
+        botones++;
+      }
+    });
+    return { ms: performance.now() - t0, botones, reflows: botones };
+  }
+
+  // Solución (literal): fase de lectura (guarda en array), fase de escritura.
+  function ejecutarSolucion(container: HTMLElement) {
+    const resumenes = container.querySelectorAll<HTMLElement>(".resumen");
+    const t0 = performance.now();
+    const necesitanBoton: HTMLElement[] = [];
+    resumenes.forEach((resumen) => {
+      if (resumen.scrollHeight > resumen.clientHeight) {
+        necesitanBoton.push(resumen);
+      }
+    });
+    necesitanBoton.forEach((resumen) => {
+      const boton = document.createElement("button");
+      boton.textContent = "Leer más";
+      boton.className = "leer-mas";
+      resumen.parentElement?.appendChild(boton);
+    });
+    return { ms: performance.now() - t0, botones: necesitanBoton.length, reflows: 1 };
+  }
+
+  function pintarStats(
+    modo: Modo,
+    resultado: { ms: number; botones: number; reflows: number },
+  ) {
+    const el = modo === "roto" ? statsRotoEl : statsSolucionEl;
+    if (el) {
+      el.innerHTML =
+        `<strong>${resultado.ms.toFixed(1)} ms</strong>` +
+        ` · ${resultado.botones} botones insertados` +
+        ` · <strong>~${resultado.reflows} reflows forzados</strong>`;
+    }
+  }
+
+  function pintarPlaceholder(modo: Modo) {
+    const el = modo === "roto" ? statsRotoEl : statsSolucionEl;
+    if (el) el.innerHTML = '<span class="demo-medida-placeholder">Pulsa Ejecutar para medir</span>';
+  }
+
+  function ejecutar() {
+    const cantidad = Number(cantidadSelector?.value ?? 500);
+    const container = modoActivo === "roto" ? contenedorRoto : contenedorSolucion;
+    if (!container) return;
+    generarResumenes(container, cantidad);
+    const resultado = modoActivo === "roto" ? ejecutarRoto(container) : ejecutarSolucion(container);
+    pintarStats(modoActivo, resultado);
+  }
+
+  function setModo(nuevo: Modo) {
+    if (nuevo === modoActivo) return;
+    modoActivo = nuevo;
+    panelResultados?.setAttribute("data-modo", nuevo);
+    modoButtons?.forEach((b) => {
+      const esActivo = b.dataset.modo === nuevo;
+      b.classList.toggle("activo", esActivo);
+      b.setAttribute("aria-selected", esActivo ? "true" : "false");
+    });
+  }
+
+  function resetear() {
+    if (contenedorRoto) contenedorRoto.innerHTML = "";
+    if (contenedorSolucion) contenedorSolucion.innerHTML = "";
+    pintarPlaceholder("roto");
+    pintarPlaceholder("solucion");
+  }
+
+  if (controles && cantidadSelector) {
+    controles.addEventListener("click", (e) => {
+      const target = e.target as Element;
+      const modoBtn = target?.closest<HTMLButtonElement>(".modo-selector button[data-modo]");
+      if (modoBtn?.dataset.modo) {
+        setModo(modoBtn.dataset.modo as Modo);
+        return;
+      }
+      const accionBtn = target?.closest<HTMLButtonElement>("button[data-accion]");
+      if (accionBtn?.dataset.accion === "ejecutar") ejecutar();
+      else if (accionBtn?.dataset.accion === "reset") resetear();
+    });
+    pintarPlaceholder("roto");
+    pintarPlaceholder("solucion");
+  }
+</script>
+
+<style>
+  /* Selector segmentado de modo (mismo patrón que las demos anteriores). */
+  .modo-selector {
+    display: inline-flex;
+    gap: var(--esp-xs);
+  }
+
+  .modo-selector .demo-boton.roto {
+    background: var(--fondo);
+    color: var(--error);
+    border-color: var(--error);
+  }
+
+  .modo-selector .demo-boton.roto.activo {
+    background: var(--error);
+    color: var(--papel);
+  }
+
+  .modo-selector .demo-boton.solucion {
+    background: var(--fondo);
+    color: var(--acento);
+    border-color: var(--acento);
+  }
+
+  .modo-selector .demo-boton.solucion.activo {
+    background: var(--acento);
+    color: var(--papel);
+  }
+
+  .modo-selector .demo-boton:not(.activo) {
+    opacity: 0.7;
+  }
+
+  /* Botón Ejecutar destacado en amarillo (mismo estilo que "anadir" de la 6). */
+  .demo-boton.anadir {
+    background: var(--destacado);
+    color: var(--tinta);
+    border-color: var(--tinta);
+  }
+
+  .demo-boton.anadir:hover {
+    transform: translateY(-1px);
+  }
+
+  /* Panel de resultados: solo la columna del modo activo visible. */
+  .panel-resultados {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--esp-lg);
+  }
+
+  .panel-resultados[data-modo="roto"] .columna.solucion,
+  .panel-resultados[data-modo="solucion"] .columna.roto {
+    display: none;
+  }
+
+  .columna {
+    display: flex;
+    flex-direction: column;
+    gap: var(--esp-sm);
+    padding: var(--esp-md);
+    border: 2px solid var(--texto);
+    border-radius: var(--radio-md);
+    min-width: 0;
+  }
+
+  .columna.roto {
+    border-color: var(--error);
+  }
+
+  .columna.solucion {
+    border-color: var(--acento);
+  }
+
+  .cabecera-columna {
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-000);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding-bottom: var(--esp-xs);
+    border-bottom: 1px solid currentColor;
+  }
+
+  .columna.roto .cabecera-columna {
+    color: var(--error);
+  }
+
+  .columna.solucion .cabecera-columna {
+    color: var(--acento);
+  }
+
+  .stats-columna {
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-00);
+    color: var(--texto);
+  }
+
+  .stats-columna :global(strong) {
+    color: var(--acento);
+  }
+
+  /* Contenedor de resúmenes: grid de tarjetas con scroll interno. */
+  .contenedor-resumenes {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: var(--esp-xs);
+    max-height: 20rem;
+    overflow-y: auto;
+    padding: var(--esp-xs);
+    border: 1px solid color-mix(in srgb, var(--texto) 20%, transparent);
+    border-radius: var(--radio-sm);
+    min-height: 6rem;
+  }
+
+  .contenedor-resumenes :global(.tarjeta-resumen) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--esp-2xs);
+    padding: var(--esp-xs) var(--esp-sm);
+    background: var(--fondo);
+    border: 1px solid color-mix(in srgb, var(--texto) 15%, transparent);
+    border-radius: var(--radio-sm);
+  }
+
+  .contenedor-resumenes :global(.resumen) {
+    max-height: 3.6rem;
+    overflow: hidden;
+    margin: 0;
+    font-family: var(--fuente-texto);
+    font-size: var(--paso-000);
+    line-height: 1.4;
+    max-width: none;
+  }
+
+  .contenedor-resumenes :global(.leer-mas) {
+    align-self: flex-start;
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-000);
+    padding: 2px 6px;
+    background: transparent;
+    border: 1px solid var(--acento);
+    color: var(--acento);
+    border-radius: var(--radio-sm);
+    cursor: pointer;
+  }
+</style>

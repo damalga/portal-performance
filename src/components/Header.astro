@@ -1,0 +1,30 @@
+---
+/*
+ * Cabecera del sitio. Un solo enlace: la marca hacia la home.
+ * Sin nav interno: no había otras rutas más allá de la propia home,
+ * y la marca ya cumple esa función.
+ */
+---
+
+<header class="cabecera">
+  <a href="/" class="marca">Portal Performance</a>
+</header>
+
+<style>
+  .cabecera {
+    display: flex;
+    align-items: center;
+    padding: var(--esp-md) var(--esp-lg);
+    border-bottom: 1px solid var(--texto);
+    background: var(--fondo);
+  }
+
+  .marca {
+    font-family: var(--fuente-display);
+    font-weight: 800;
+    font-size: var(--paso-1);
+    letter-spacing: -0.02em;
+    text-decoration: none;
+    color: inherit;
+  }
+</style>

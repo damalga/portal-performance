@@ -65,7 +65,7 @@ src/
     HuecoPublicidad.astro
     Centinela.astro
     PlaceholderPortada.astro
-    Nav.astro
+    Header.astro         # cabecera con la marca (enlace a home)
     demos/
       DemoRenderLista.astro
       DemoFetchSeguro.astro

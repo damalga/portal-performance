@@ -2,30 +2,28 @@
 import Nota from "../Nota.astro";
 ---
 
-<section
-  id="demo-buscador-debounce"
-  class="demo-panel"
-  aria-labelledby="demo-buscador-debounce-titulo"
->
+<section id="demo-tabla-contador" class="demo-panel" aria-labelledby="demo-tabla-contador-titulo">
   <header class="demo-titulo">
     <span class="demo-etiqueta">Pruébalo</span>
-    <h3 id="demo-buscador-debounce-titulo">Filtrar en cada tecla vs debounce</h3>
+    <h3 id="demo-tabla-contador-titulo">Contador dentro del bucle vs con <code>.length</code></h3>
   </header>
 
   <p class="demo-intro">
-    Elige un modo y escribe: solo el modo activo procesa el input. Sube la lista
-    a 1.000 elementos y prueba <strong>sin debounce</strong>: el propio teclear
-    se engancha porque cada pulsación filtra y repinta con
-    <code>innerHTML +=</code> dentro del bucle. Cambia a <strong>con debounce</strong>:
-    fluido, y el contador solo sube una vez por pausa.
+    Este ejercicio suma un problema encima del anterior: el contador de
+    resultados se actualiza en <em>cada</em> iteración del bucle. Como el
+    navegador solo repinta el valor final, la tabla y el contador se ven
+    idénticos en las dos versiones. La diferencia está en la stat
+    <strong>"Updates al contador DOM"</strong> — en <em>sin optimizar</em>
+    crece con cada match; en <em>optimizado</em>, uno por filtro.
   </p>
 
   <Nota tipo="info">
     <p>
-      Los dos modos comparten el mismo <code>&lt;input&gt;</code>, pero cada uno
-      corre su propio handler aislado. Antes ambos se disparaban a la vez y la
-      versión con debounce quedaba lastrada por la sin debounce, aunque
-      técnicamente estuviese bien.
+      El navegador batch-ea los repaints, así que aunque hagas
+      <code>textContent = "..."</code> cincuenta veces en un tick, solo pinta
+      la última. Pero el trabajo del hilo principal (setter + invalidación de
+      layout) sí se hace las cincuenta veces. Este demo lo cuenta para que se
+      vea lo que la pantalla oculta.
     </p>
   </Nota>
 
@@ -38,7 +36,7 @@ import Nota from "../Nota.astro";
         role="tab"
         aria-selected="false"
       >
-        Sin debounce
+        Sin optimizar
       </button>
       <button
         type="button"
@@ -47,20 +45,20 @@ import Nota from "../Nota.astro";
         role="tab"
         aria-selected="true"
       >
-        Con debounce
+        Optimizado
       </button>
     </div>
     <input
       type="text"
-      id="demo-buscador-debounce-input"
+      id="demo-tabla-contador-input"
       class="input-buscador"
       placeholder="Escribe para filtrar..."
       autocomplete="off"
       spellcheck="false"
     />
     <label class="demo-cantidad">
-      <span>Productos</span>
-      <select id="demo-buscador-debounce-cantidad">
+      <span>Elementos</span>
+      <select id="demo-tabla-contador-cantidad">
         <option value="5">5</option>
         <option value="100">100</option>
         <option value="1000" selected>1.000</option>
@@ -71,100 +69,123 @@ import Nota from "../Nota.astro";
 
   <div class="panel-resultados" data-modo="solucion">
     <div class="columna roto">
-      <div class="cabecera-columna">Sin debounce · innerHTML += en bucle</div>
-      <div class="stats-columna" id="demo-buscador-debounce-stats-roto">
-        Filtros: 0 · último: — ms
+      <div class="cabecera-columna">Sin optimizar · contador dentro del bucle</div>
+      <div class="stats-columna" id="demo-tabla-contador-stats-roto">
+        Filtros: 0 · Updates al contador: 0 · último: — ms
       </div>
-      <div
-        id="demo-buscador-debounce-lista-roto"
-        class="lista-buscador"
-        aria-label="Resultados sin debounce"
-      >
+      <div class="contador-resultados" id="demo-tabla-contador-contador-roto">Resultados: 0</div>
+      <div class="tabla-contenedor">
+        <table class="tabla-elementos">
+          <thead>
+            <tr>
+              <th>Elemento</th>
+            </tr>
+          </thead>
+          <tbody id="demo-tabla-contador-tbody-roto"></tbody>
+        </table>
       </div>
     </div>
     <div class="columna solucion">
-      <div class="cabecera-columna">Con debounce 200ms · map().join("")</div>
-      <div class="stats-columna" id="demo-buscador-debounce-stats-solucion">
-        Filtros: 0 · último: — ms
+      <div class="cabecera-columna">Optimizado · debounce + .length + map/join</div>
+      <div class="stats-columna" id="demo-tabla-contador-stats-solucion">
+        Filtros: 0 · Updates al contador: 0 · último: — ms
       </div>
-      <div
-        id="demo-buscador-debounce-lista-solucion"
-        class="lista-buscador"
-        aria-label="Resultados con debounce"
-      >
+      <div class="contador-resultados" id="demo-tabla-contador-contador-solucion">
+        Resultados: 0
+      </div>
+      <div class="tabla-contenedor">
+        <table class="tabla-elementos">
+          <thead>
+            <tr>
+              <th>Elemento</th>
+            </tr>
+          </thead>
+          <tbody id="demo-tabla-contador-tbody-solucion"></tbody>
+        </table>
       </div>
     </div>
   </div>
 </section>
 
 <script>
-  /* Demo interactiva del ejercicio 3 (buscador-debounce).
-   * Dos modos mutuamente exclusivos ("Sin debounce" / "Con debounce")
-   * seleccionables por botón. Solo el modo activo procesa el input event,
-   * de modo que la experiencia de escritura refleja el coste real de esa
-   * variante sin lastrarse la otra. La columna del modo inactivo se
-   * oculta para dar todo el ancho a la activa. */
+  /* Demo interactiva del ejercicio 4 (tabla-contador).
+   * Dos modos mutuamente exclusivos, solo el activo procesa el input.
+   * La lección específica: el contador que se actualiza dentro del bucle
+   * (roto) vs una sola vez usando .length (solución). El navegador
+   * repinta el mismo valor final, pero cuenta "Updates al contador DOM"
+   * revela el trabajo redundante. */
   type Modo = "roto" | "solucion";
 
-  const seccion = document.getElementById("demo-buscador-debounce");
+  function generarElementos(n: number): string[] {
+    return Array.from({ length: n }, (_, i) => `Elemento ${i + 1}`);
+  }
+
+  const seccion = document.getElementById("demo-tabla-contador");
   const inputBuscador = document.getElementById(
-    "demo-buscador-debounce-input",
+    "demo-tabla-contador-input",
   ) as HTMLInputElement | null;
   const cantidadSelector = document.getElementById(
-    "demo-buscador-debounce-cantidad",
+    "demo-tabla-contador-cantidad",
   ) as HTMLSelectElement | null;
   const controles = seccion?.querySelector<HTMLDivElement>(".demo-controles");
   const panelResultados = seccion?.querySelector<HTMLDivElement>(".panel-resultados");
-  const modoButtons = seccion?.querySelectorAll<HTMLButtonElement>(".modo-selector button[data-modo]");
-  const listaRoto = document.getElementById("demo-buscador-debounce-lista-roto");
-  const listaSolucion = document.getElementById("demo-buscador-debounce-lista-solucion");
-  const statsRotoEl = document.getElementById("demo-buscador-debounce-stats-roto");
-  const statsSolucionEl = document.getElementById("demo-buscador-debounce-stats-solucion");
+  const modoButtons = seccion?.querySelectorAll<HTMLButtonElement>(
+    ".modo-selector button[data-modo]",
+  );
+  const tbodyRoto = document.getElementById("demo-tabla-contador-tbody-roto");
+  const tbodySolucion = document.getElementById("demo-tabla-contador-tbody-solucion");
+  const contadorRoto = document.getElementById("demo-tabla-contador-contador-roto");
+  const contadorSolucion = document.getElementById("demo-tabla-contador-contador-solucion");
+  const statsRotoEl = document.getElementById("demo-tabla-contador-stats-roto");
+  const statsSolucionEl = document.getElementById("demo-tabla-contador-stats-solucion");
 
   let modoActivo: Modo = "solucion";
-  let productos: string[] = [];
+  let elementos: string[] = [];
   let filtrosRoto = 0;
   let filtrosSolucion = 0;
-
-  function generarProductos(cantidad: number) {
-    return Array.from({ length: cantidad }, (_, i) => `Elemento ${i + 1}`);
-  }
+  let updatesRoto = 0;
+  let updatesSolucion = 0;
 
   function pintarStats(quien: Modo, ms: number) {
     const el = quien === "roto" ? statsRotoEl : statsSolucionEl;
-    const veces = quien === "roto" ? filtrosRoto : filtrosSolucion;
-    if (el) el.textContent = `Filtros: ${veces} · último: ${ms.toFixed(1)} ms`;
+    const filtros = quien === "roto" ? filtrosRoto : filtrosSolucion;
+    const updates = quien === "roto" ? updatesRoto : updatesSolucion;
+    if (el) el.textContent = `Filtros: ${filtros} · Updates al contador: ${updates} · último: ${ms.toFixed(1)} ms`;
   }
 
-  // Rota: filtra y pinta en cada evento input, con innerHTML += en el bucle.
+  // Rota (literal del ejercicio, adaptada a un elemento por fila):
+  // tbody.innerHTML += en el bucle, contador actualizado en cada match.
   function filtrarRoto(query: string) {
-    if (!listaRoto) return;
+    if (!tbodyRoto || !contadorRoto) return;
     filtrosRoto++;
     const t0 = performance.now();
     const q = query.toLowerCase();
-    listaRoto.innerHTML = "";
-    productos
-      .filter((p) => p.toLowerCase().includes(q))
-      .forEach((p) => {
-        listaRoto.innerHTML += "<div>" + p + "</div>";
-      });
+    tbodyRoto.innerHTML = "";
+    let total = 0;
+    elementos.forEach((el) => {
+      if (el.toLowerCase().includes(q)) {
+        tbodyRoto.innerHTML += `<tr><td>${el}</td></tr>`;
+        total++;
+        contadorRoto.textContent = "Resultados: " + total;
+        updatesRoto++;
+      }
+    });
     pintarStats("roto", performance.now() - t0);
   }
 
-  // Solución: timeout fuera (vive entre llamadas) + una sola asignación con
-  // map/join tras la pausa de 200ms.
+  // Solución (literal): debounce + filtrados.map(...).join('') + .length.
   let timeoutSolucion: ReturnType<typeof setTimeout> | null = null;
   function filtrarSolucion(query: string) {
     if (timeoutSolucion) clearTimeout(timeoutSolucion);
     timeoutSolucion = setTimeout(() => {
-      if (!listaSolucion) return;
+      if (!tbodySolucion || !contadorSolucion) return;
       filtrosSolucion++;
       const t0 = performance.now();
-      const q = query.toLowerCase().trim();
-      listaSolucion.innerHTML = productos
-        .filter((p) => p.toLowerCase().includes(q))
-        .map((p) => `<div>${p}</div>`)
-        .join("");
+      const q = query.toLowerCase();
+      const filtrados = elementos.filter((el) => el.toLowerCase().includes(q));
+      tbodySolucion.innerHTML = filtrados.map((el) => `<tr><td>${el}</td></tr>`).join("");
+      contadorSolucion.textContent = "Resultados: " + filtrados.length;
+      updatesSolucion++;
       pintarStats("solucion", performance.now() - t0);
     }, 200);
   }
@@ -178,8 +199,6 @@ import Nota from "../Nota.astro";
       b.classList.toggle("activo", esActivo);
       b.setAttribute("aria-selected", esActivo ? "true" : "false");
     });
-    // Si hay texto en el input, re-ejecuta el handler del modo recién elegido
-    // para que la columna visible refleje ya el estado con esa query.
     const q = inputBuscador?.value ?? "";
     if (q) {
       if (nuevo === "roto") filtrarRoto(q);
@@ -189,14 +208,18 @@ import Nota from "../Nota.astro";
 
   function resetear() {
     const cantidad = Number(cantidadSelector?.value ?? 1000);
-    productos = generarProductos(cantidad);
+    elementos = generarElementos(cantidad);
     filtrosRoto = 0;
     filtrosSolucion = 0;
+    updatesRoto = 0;
+    updatesSolucion = 0;
     if (timeoutSolucion) clearTimeout(timeoutSolucion);
     pintarStats("roto", 0);
     pintarStats("solucion", 0);
-    if (listaRoto) listaRoto.innerHTML = "";
-    if (listaSolucion) listaSolucion.innerHTML = "";
+    if (tbodyRoto) tbodyRoto.innerHTML = "";
+    if (tbodySolucion) tbodySolucion.innerHTML = "";
+    if (contadorRoto) contadorRoto.textContent = "Resultados: 0";
+    if (contadorSolucion) contadorSolucion.textContent = "Resultados: 0";
     if (inputBuscador) inputBuscador.value = "";
   }
 
@@ -240,8 +263,7 @@ import Nota from "../Nota.astro";
     outline-offset: 1px;
   }
 
-  /* Selector segmentado de modo. Override local de .demo-boton para que
-     los dos botones alternen entre outlined (inactivo) y filled (activo). */
+  /* Selector segmentado de modo (mismo patrón que DemoBuscadorDebounce). */
   .modo-selector {
     display: inline-flex;
     gap: var(--esp-xs);
@@ -273,9 +295,7 @@ import Nota from "../Nota.astro";
     opacity: 0.7;
   }
 
-  /* Panel de resultados: una sola columna visible, la del modo activo,
-     ocupando todo el ancho. La otra queda display:none para no ocupar
-     hueco ni pintar. */
+  /* Solo una columna visible a la vez, ocupando todo el ancho. */
   .panel-resultados {
     display: grid;
     grid-template-columns: 1fr;
@@ -328,17 +348,44 @@ import Nota from "../Nota.astro";
     color: color-mix(in srgb, var(--texto) 70%, transparent);
   }
 
-  .lista-buscador {
+  .contador-resultados {
+    font-family: var(--fuente-display);
+    font-size: var(--paso-2);
+    font-weight: 700;
+    color: var(--texto);
+    padding: var(--esp-xs) 0;
+  }
+
+  .tabla-contenedor {
     max-height: 20rem;
     overflow-y: auto;
     border: 1px solid color-mix(in srgb, var(--texto) 20%, transparent);
     border-radius: var(--radio-sm);
-    padding: var(--esp-xs);
   }
 
-  .lista-buscador :global(div) {
-    padding: var(--esp-2xs) var(--esp-xs);
+  .tabla-elementos {
+    width: 100%;
+    border-collapse: collapse;
     font-family: var(--fuente-mono);
     font-size: var(--paso-00);
+  }
+
+  .tabla-elementos th,
+  .tabla-elementos td {
+    padding: var(--esp-xs) var(--esp-sm);
+    border-bottom: 1px solid color-mix(in srgb, var(--texto) 15%, transparent);
+    text-align: left;
+  }
+
+  .tabla-elementos thead th {
+    position: sticky;
+    top: 0;
+    background: var(--fondo);
+    font-family: var(--fuente-display);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: var(--paso-000);
+    color: color-mix(in srgb, var(--texto) 70%, transparent);
+    border-bottom: 2px solid var(--texto);
   }
 </style>

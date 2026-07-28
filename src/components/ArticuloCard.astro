@@ -3,17 +3,18 @@ import PlaceholderPortada from "./PlaceholderPortada.astro";
 
 interface Props {
   titulo: string;
+  etiquetaPortada: string;
   slug: string;
   resumen: string;
   categoria: "dom" | "eventos" | "datos" | "metricas";
 }
 
-const { titulo, slug, resumen, categoria } = Astro.props;
+const { titulo, etiquetaPortada, slug, resumen, categoria } = Astro.props;
 ---
 
 <article class="tarjeta">
   <a href={`/ejercicios/${slug}`} class="enlace">
-    <PlaceholderPortada titulo={titulo} categoria={categoria} compacto />
+    <PlaceholderPortada titulo={etiquetaPortada} categoria={categoria} compacto />
     <div class="cuerpo">
       <h2>{titulo}</h2>
       <p>{resumen}</p>

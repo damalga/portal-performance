@@ -1,24 +1,25 @@
 ---
 import Base from "./Base.astro";
-import Nav from "../components/Nav.astro";
+import Header from "../components/Header.astro";
 import PlaceholderPortada from "../components/PlaceholderPortada.astro";
 
 interface Props {
   titulo: string;
+  etiquetaPortada: string;
   resumen: string;
   categoria: "dom" | "eventos" | "datos" | "metricas";
   conceptos: string[];
 }
 
-const { titulo, resumen, categoria, conceptos } = Astro.props;
+const { titulo, etiquetaPortada, resumen, categoria, conceptos } = Astro.props;
 ---
 
 <Base titulo={`${titulo} · Portal Performance`} descripcion={resumen}>
-  <Nav />
+  <Header />
 
   <article class="ficha">
     <header class="cabecera">
-      <PlaceholderPortada titulo={titulo} />
+      <PlaceholderPortada titulo={etiquetaPortada} />
       <div class="meta">
         <span class="categoria">{categoria}</span>
       </div>

@@ -13,10 +13,13 @@ export async function getStaticPaths() {
 
 const { entrada } = Astro.props;
 const { Content } = await render(entrada);
+
+const etiquetaPortada = entrada.data.ejercicio ?? `Ejercicio ${entrada.data.orden}`;
 ---
 
 <Articulo
   titulo={entrada.data.titulo}
+  etiquetaPortada={etiquetaPortada}
   resumen={entrada.data.resumen}
   categoria={entrada.data.categoria}
   conceptos={entrada.data.conceptos}

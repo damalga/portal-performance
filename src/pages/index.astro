@@ -1,7 +1,7 @@
 ---
 import { getCollection } from "astro:content";
 import Base from "../layouts/Base.astro";
-import Nav from "../components/Nav.astro";
+import Header from "../components/Header.astro";
 import ArticuloCard from "../components/ArticuloCard.astro";
 
 const ejercicios = (await getCollection("ejercicios")).sort((a, b) => a.data.orden - b.data.orden);
@@ -11,7 +11,7 @@ const ejercicios = (await getCollection("ejercicios")).sort((a, b) => a.data.ord
   titulo="Portal Performance"
   descripcion="Ejercicios de rendimiento frontend. Un problema real, la solución, y una comprobación."
 >
-  <Nav />
+  <Header />
 
   <main class="home">
     <section class="hero">
@@ -27,6 +27,7 @@ const ejercicios = (await getCollection("ejercicios")).sort((a, b) => a.data.ord
         ejercicios.map((e) => (
           <ArticuloCard
             titulo={e.data.titulo}
+            etiquetaPortada={e.data.ejercicio ?? `Ejercicio ${e.data.orden}`}
             slug={e.id}
             resumen={e.data.resumen}
             categoria={e.data.categoria}

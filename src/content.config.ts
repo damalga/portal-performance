@@ -12,6 +12,7 @@ const ejercicios = defineCollection({
   schema: z.object({
     titulo: z.string(),
     orden: z.number().int().positive(),
+    ejercicio: z.string().optional(),
     categoria: z.enum(["dom", "eventos", "datos", "metricas"]),
     resumen: z.string(),
     conceptos: z.array(z.string()).min(1),

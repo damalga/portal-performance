@@ -1,6 +1,7 @@
 const lista = document.getElementById("articulos");
 const centinela = document.getElementById("cargar-mas");
 let siguientePagina = 2;
+let cargando = false;
 
 const observer = new IntersectionObserver(
   ([ele]) => {

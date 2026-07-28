@@ -64,11 +64,3 @@
   --radio-md: 6px;
   --radio-lg: 12px;
 }
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --fondo: var(--tinta);
-    --texto: var(--papel);
-    /* --acento y --destacado no cambian: puros a saturación máxima en ambos temas */
-  }
-}

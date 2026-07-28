@@ -24,13 +24,12 @@ infantil.
 ## 2. Stack
 
 - **Astro** como framework base. Renderizado estático, cero JavaScript por defecto.
-- **Vue** para las islas interactivas (`npx astro add vue`).
-- **Preact** para exactamente una isla (`npx astro add preact`), de forma
-  deliberada: demuestra que Astro permite convivencia de frameworks y migración
-  gradual. Isla elegida: el cuestionario del primer artículo. El resto de
-  cuestionarios en Vue.
+- **Preact** para una única isla (`npx astro add preact`), de forma deliberada:
+  demuestra que Astro permite convivencia de frameworks y migración gradual.
+  
 - **Content collections** de Astro para los artículos, en Markdown con frontmatter
   tipado mediante schema de Zod.
+  
 - Sin librerías de UI, sin Tailwind. CSS propio con variables.
 
 ---

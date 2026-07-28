@@ -92,6 +92,7 @@ window.addEventListener("scroll", () => {
 const lista = document.getElementById("articulos");
 const centinela = document.getElementById("cargar-mas");
 let siguientePagina = 2;
+let cargando = false;
 
 const observer = new IntersectionObserver(
   ([ele]) => {
@@ -146,10 +147,5 @@ para pintar los 5 nuevos. `insertAdjacentHTML` parsea solo el
 fragmento nuevo.
 
 Este es el script que gobierna el scroll infinito real de la home.
-
-> Nota del proyecto: el fragmento fuente omite la declaración de
-> `cargando`. En estricto rompería; en no-estricto se convierte en
-> global implícita. En la implementación real la declaramos como
-> `let cargando = false;` antes del observer.
 
 </Solucion>

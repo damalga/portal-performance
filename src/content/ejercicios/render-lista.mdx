@@ -9,25 +9,25 @@ quiz:
   - pregunta: "¿Por qué es lento insertar 500 nodos con appendChild dentro de un bucle?"
     opciones:
       - "Porque el bucle for es más lento que forEach o map en los navegadores modernos."
-      - "Porque cada modificación al DOM invalida el layout y puede provocar un reflow del árbol de renderizado."
-      - "Porque createElement reserva memoria y el garbage collector se dispara por cada nodo."
+      - "Porque createElement reserva memoria y el garbage collector se dispara por cada nodo insertado."
       - "Porque appendChild es asíncrono y el navegador espera que resuelva cada promesa antes de continuar."
+      - "Porque cada modificación al DOM invalida el layout y puede provocar un reflow del árbol de renderizado."
       - "Porque textContent con concatenación de strings tiene coste cuadrático a partir de cierto tamaño."
-    correcta: 1
+    correcta: 3
   - pregunta: "¿Qué hace un DocumentFragment y por qué ayuda aquí?"
     opciones:
+      - "Es una caché de estilos que el navegador comparte entre nodos del mismo tipo, evitando recalcularlos cuando se insertan varios."
+      - "Es un objeto que registra automáticamente los cambios al DOM para deshacerlos si algo falla durante la inserción."
+      - "Es un modo de rendering paralelo que descarga el trabajo al compositor thread para no bloquear el hilo principal."
+      - "Es una promesa que resuelve cuando el navegador termina de pintar y notifica al script que puede seguir mutando."
       - "Es un contenedor invisible en memoria que puede acumular nodos y volcarlos al DOM en una única inserción."
-      - "Es un cache de estilos que el navegador comparte entre nodos del mismo tipo."
-      - "Es un modo de rendering paralelo que descarga el trabajo al compositor thread."
-      - "Es un objeto que registra automáticamente los cambios al DOM para deshacerlos si fallan."
-      - "Es una promesa que resuelve cuando el navegador termina de pintar."
-    correcta: 0
+    correcta: 4
   - pregunta: "Al hacer `container.append(...items)` con 500 elementos, ¿cuántos reflows fuerza?"
     opciones:
       - "500, uno por elemento del spread."
       - "Cero: append no fuerza reflow, solo lo marca como necesario."
       - "Uno solo: es una única operación desde el punto de vista del layout."
-      - "Depende del navegador y no se puede predecir."
+      - "Depende del navegador y no se puede predecir de antemano."
       - "Dos: uno al principio y otro al final del batch."
     correcta: 2
   - pregunta: "¿Cuál de estas variantes también sirve para bajar los 500 reflows a uno?"
@@ -40,12 +40,12 @@ quiz:
     correcta: 0
   - pregunta: "¿Qué es exactamente un “reflow”?"
     opciones:
+      - "El recolector de basura ejecutándose sobre nodos huérfanos que ya no cuelgan del árbol del documento."
       - "El proceso por el que el navegador recalcula posiciones y tamaños de los elementos afectados por un cambio."
-      - "Un evento que el DOM emite cuando termina de dibujar."
-      - "El repintado de píxeles cuando cambia un color, sin tocar la geometría."
-      - "Una llamada a la GPU para componer las capas visibles."
-      - "El recolector de basura ejecutándose sobre nodos huérfanos."
-    correcta: 0
+      - "Una llamada a la GPU para componer las capas visibles antes de mostrarlas en pantalla."
+      - "El repintado de píxeles cuando cambia un color o una imagen, sin necesidad de recalcular la geometría del árbol."
+      - "Un evento que el DOM emite cuando termina de dibujar y las mutaciones pendientes están ya en pantalla."
+    correcta: 1
 ---
 
 import Solucion from "../../components/Solucion.astro";

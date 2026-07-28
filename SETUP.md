@@ -130,13 +130,7 @@ Roles semánticos derivados (no color nuevo, solo alias):
 --hueco-publi: var(--publi);
 ```
 
-En modo oscuro (`@media (prefers-color-scheme: dark)`):
-
-```css
---fondo: var(--tinta);
---texto: var(--papel);
-/* --acento y --destacado no cambian: puros a saturación máxima en ambos temas */
-```
+Sin dark mode: decisión deliberada del proyecto. El diseño con amarillo/azul puros sobre papel tiene identidad propia y no se busca variante oscura. Desviación explícita respecto a la sección 8 del brief.
 
 ---
 

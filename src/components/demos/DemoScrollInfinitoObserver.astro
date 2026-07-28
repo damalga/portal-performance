@@ -1,0 +1,425 @@
+---
+import Nota from "../Nota.astro";
+---
+
+<section
+  id="demo-scroll-infinito-observer"
+  class="demo-panel"
+  aria-labelledby="demo-scroll-infinito-titulo"
+>
+  <header class="demo-titulo">
+    <span class="demo-etiqueta">Pruébalo</span>
+    <h3 id="demo-scroll-infinito-titulo">
+      Scroll infinito: listener + <code>innerHTML +=</code> vs Observer + bandera + <code>insertAdjacentHTML</code>
+    </h3>
+  </header>
+
+  <p class="demo-intro">
+    Cada modo tiene su propio scroll container con 10 artículos y un centinela
+    al final. Al scrollear cerca del fondo, arranca la "carga de la siguiente
+    página" (fetch simulado con 300ms de latencia). En <em>sin control</em>:
+    scroll listener sin bandera, cada evento comprueba el centinela con
+    <code>getBoundingClientRect()</code> y lanza un fetch; con el retardo del
+    servidor, terminas con muchos fetches en vuelo para la misma página y
+    artículos duplicados en la lista. En <em>Observer + bandera</em>:
+    IntersectionObserver, bandera <code>cargando</code> que se baja en
+    <code>.finally()</code>, e <code>insertAdjacentHTML</code>.
+  </p>
+
+  <Nota tipo="info">
+    <p>
+      El demo corta a <strong>20 fetches por modo</strong> como red de
+      seguridad para que un scroll rápido no cuelgue el navegador. La versión
+      rota alcanzará ese tope enseguida con cualquier gesto de scroll; la
+      solución tardará 20 páginas legítimas en llegar. La stat
+      <strong>Duplicados</strong> es la que revela la race condition: fetches
+      lanzados mientras otro para la misma página seguía en vuelo.
+    </p>
+  </Nota>
+
+  <div class="demo-controles" role="group" aria-label="Comparativa">
+    <div class="modo-selector" role="tablist" aria-label="Elegir modo">
+      <button
+        type="button"
+        data-modo="roto"
+        class="demo-boton roto"
+        role="tab"
+        aria-selected="false"
+      >
+        Sin control
+      </button>
+      <button
+        type="button"
+        data-modo="solucion"
+        class="demo-boton solucion activo"
+        role="tab"
+        aria-selected="true"
+      >
+        Observer + bandera
+      </button>
+    </div>
+    <button type="button" data-accion="reset" class="demo-boton reset"> Reset </button>
+  </div>
+
+  <div class="panel-resultados" data-modo="solucion">
+    <div class="columna roto">
+      <div class="cabecera-columna">
+        Sin control · scroll + innerHTML += + sin bandera
+      </div>
+      <div class="stats-columna" id="demo-scroll-infinito-stats-roto">
+        Disparos: 0 · Fetches: 0 · Duplicados: 0 · Artículos: 10
+      </div>
+      <div class="scroll-contenedor-inf" id="demo-scroll-infinito-contenedor-roto">
+        <div class="lista-articulos" id="demo-scroll-infinito-lista-roto"></div>
+        <div class="centinela" id="demo-scroll-infinito-centinela-roto">
+          Cargando siguiente página...
+        </div>
+      </div>
+    </div>
+    <div class="columna solucion">
+      <div class="cabecera-columna">
+        Observer + bandera + insertAdjacentHTML
+      </div>
+      <div class="stats-columna" id="demo-scroll-infinito-stats-solucion">
+        Disparos: 0 · Fetches: 0 · Duplicados: 0 · Artículos: 10
+      </div>
+      <div class="scroll-contenedor-inf" id="demo-scroll-infinito-contenedor-solucion">
+        <div class="lista-articulos" id="demo-scroll-infinito-lista-solucion"></div>
+        <div class="centinela" id="demo-scroll-infinito-centinela-solucion">
+          Cargando siguiente página...
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  /* Demo interactiva del ejercicio 8 (scroll-infinito-observer).
+   * Dos contenedores scrollables locales, uno por modo. Solo el activo
+   * es visible/scrolleable.
+   * Rota: scroll listener sobre el contenedor + comprobación con
+   * getBoundingClientRect + fetch sin bandera + innerHTML += en el then.
+   * Solución: IntersectionObserver con root=contenedor + bandera
+   * cargando + insertAdjacentHTML + finally para bajar la bandera.
+   * Cap de seguridad de 20 fetches por modo para evitar runaways. */
+  type Modo = "roto" | "solucion";
+
+  const MAX_FETCHES = 20;
+  const LATENCIA_MS = 300;
+  const POR_PAGINA = 10;
+
+  interface EstadoModo {
+    siguientePagina: number;
+    disparos: number;
+    fetches: number;
+    duplicados: number;
+    articulos: number;
+    enVuelo: Set<number>;
+    cargando: boolean;
+  }
+
+  function estadoInicial(): EstadoModo {
+    return {
+      siguientePagina: 2,
+      disparos: 0,
+      fetches: 0,
+      duplicados: 0,
+      articulos: POR_PAGINA,
+      enVuelo: new Set(),
+      cargando: false,
+    };
+  }
+
+  const seccion = document.getElementById("demo-scroll-infinito-observer");
+  const controles = seccion?.querySelector<HTMLDivElement>(".demo-controles");
+  const panelResultados = seccion?.querySelector<HTMLDivElement>(".panel-resultados");
+  const modoButtons = seccion?.querySelectorAll<HTMLButtonElement>(
+    ".modo-selector button[data-modo]",
+  );
+  const contenedorRoto = document.getElementById("demo-scroll-infinito-contenedor-roto");
+  const contenedorSolucion = document.getElementById("demo-scroll-infinito-contenedor-solucion");
+  const listaRoto = document.getElementById("demo-scroll-infinito-lista-roto");
+  const listaSolucion = document.getElementById("demo-scroll-infinito-lista-solucion");
+  const centinelaRoto = document.getElementById("demo-scroll-infinito-centinela-roto");
+  const centinelaSolucion = document.getElementById("demo-scroll-infinito-centinela-solucion");
+  const statsRotoEl = document.getElementById("demo-scroll-infinito-stats-roto");
+  const statsSolucionEl = document.getElementById("demo-scroll-infinito-stats-solucion");
+
+  let modoActivo: Modo = "solucion";
+  let estadoRoto = estadoInicial();
+  let estadoSolucion = estadoInicial();
+  let observerSolucion: IntersectionObserver | null = null;
+
+  async function fetchMock(pagina: number) {
+    await new Promise((r) => setTimeout(r, LATENCIA_MS));
+    const base = (pagina - 1) * POR_PAGINA;
+    return Array.from({ length: POR_PAGINA }, (_, i) => ({
+      titulo: `Artículo ${base + i + 1}`,
+    }));
+  }
+
+  function pintarStats(modo: Modo) {
+    const el = modo === "roto" ? statsRotoEl : statsSolucionEl;
+    const e = modo === "roto" ? estadoRoto : estadoSolucion;
+    if (!el) return;
+    el.innerHTML =
+      `Disparos: <strong>${e.disparos}</strong> · ` +
+      `Fetches: <strong>${e.fetches}</strong> · ` +
+      `Duplicados: <strong>${e.duplicados}</strong> · ` +
+      `Artículos: <strong>${e.articulos}</strong>`;
+  }
+
+  function poblarInicial(lista: HTMLElement) {
+    const items: string[] = [];
+    for (let i = 1; i <= POR_PAGINA; i++) {
+      items.push(`<article class="articulo-cargado">Artículo ${i}</article>`);
+    }
+    lista.innerHTML = items.join("");
+  }
+
+  // Rota (literal del ejercicio, adaptado a scroll de contenedor local):
+  // scroll listener sin bandera, sin observer, innerHTML +=.
+  function handleScrollRoto() {
+    if (!contenedorRoto || !listaRoto || !centinelaRoto) return;
+    estadoRoto.disparos++;
+    pintarStats("roto");
+
+    const rect = centinelaRoto.getBoundingClientRect();
+    const cRect = contenedorRoto.getBoundingClientRect();
+    if (rect.top >= cRect.bottom) return;
+    if (estadoRoto.fetches >= MAX_FETCHES) return;
+
+    const pagina = estadoRoto.siguientePagina;
+    estadoRoto.fetches++;
+    if (estadoRoto.enVuelo.has(pagina)) {
+      estadoRoto.duplicados++;
+    } else {
+      estadoRoto.enVuelo.add(pagina);
+    }
+    pintarStats("roto");
+
+    fetchMock(pagina).then((articulos) => {
+      if (!listaRoto) return;
+      // Pathology del ejercicio: innerHTML += re-parsea toda la lista existente.
+      listaRoto.innerHTML += articulos
+        .map((a) => `<article class="articulo-cargado">${a.titulo}</article>`)
+        .join("");
+      estadoRoto.siguientePagina++;
+      estadoRoto.articulos += articulos.length;
+      estadoRoto.enVuelo.delete(pagina);
+      pintarStats("roto");
+    });
+  }
+
+  // Solución (literal): observer + bandera + insertAdjacentHTML + finally.
+  function handleObserverSolucion(entries: IntersectionObserverEntry[]) {
+    const [ele] = entries;
+    estadoSolucion.disparos++;
+    pintarStats("solucion");
+
+    if (!ele.isIntersecting) return;
+    if (estadoSolucion.cargando) return;
+    if (estadoSolucion.fetches >= MAX_FETCHES) return;
+
+    estadoSolucion.cargando = true;
+    const pagina = estadoSolucion.siguientePagina;
+    estadoSolucion.fetches++;
+    estadoSolucion.enVuelo.add(pagina);
+    pintarStats("solucion");
+
+    fetchMock(pagina)
+      .then((articulos) => {
+        if (!listaSolucion) return;
+        // insertAdjacentHTML parsea solo el fragmento nuevo, sin tocar lo existente.
+        listaSolucion.insertAdjacentHTML(
+          "beforeend",
+          articulos
+            .map((a) => `<article class="articulo-cargado">${a.titulo}</article>`)
+            .join(""),
+        );
+        estadoSolucion.siguientePagina++;
+        estadoSolucion.articulos += articulos.length;
+        estadoSolucion.enVuelo.delete(pagina);
+      })
+      .finally(() => {
+        // finally se ejecuta en éxito y en fallo. Si solo bajásemos la bandera
+        // en .then, un fallo (500, red caída) dejaría cargando=true para siempre
+        // y el scroll infinito no volvería a cargar jamás.
+        estadoSolucion.cargando = false;
+        pintarStats("solucion");
+      });
+  }
+
+  function inicializarObserver() {
+    if (observerSolucion) observerSolucion.disconnect();
+    if (!contenedorSolucion || !centinelaSolucion) return;
+    observerSolucion = new IntersectionObserver(handleObserverSolucion, {
+      root: contenedorSolucion,
+      rootMargin: "100px",
+    });
+    observerSolucion.observe(centinelaSolucion);
+  }
+
+  function setModo(nuevo: Modo) {
+    if (nuevo === modoActivo) return;
+    modoActivo = nuevo;
+    panelResultados?.setAttribute("data-modo", nuevo);
+    modoButtons?.forEach((b) => {
+      const esActivo = b.dataset.modo === nuevo;
+      b.classList.toggle("activo", esActivo);
+      b.setAttribute("aria-selected", esActivo ? "true" : "false");
+    });
+  }
+
+  function resetear() {
+    if (observerSolucion) observerSolucion.disconnect();
+    estadoRoto = estadoInicial();
+    estadoSolucion = estadoInicial();
+    if (listaRoto) poblarInicial(listaRoto);
+    if (listaSolucion) poblarInicial(listaSolucion);
+    if (contenedorRoto) contenedorRoto.scrollTop = 0;
+    if (contenedorSolucion) contenedorSolucion.scrollTop = 0;
+    pintarStats("roto");
+    pintarStats("solucion");
+    inicializarObserver();
+  }
+
+  if (contenedorRoto && contenedorSolucion && controles && listaRoto && listaSolucion) {
+    contenedorRoto.addEventListener("scroll", handleScrollRoto);
+    resetear();
+    controles.addEventListener("click", (e) => {
+      const target = e.target as Element;
+      const modoBtn = target?.closest<HTMLButtonElement>(".modo-selector button[data-modo]");
+      if (modoBtn?.dataset.modo) {
+        setModo(modoBtn.dataset.modo as Modo);
+        return;
+      }
+      const accionBtn = target?.closest<HTMLButtonElement>("button[data-accion]");
+      if (accionBtn?.dataset.accion === "reset") resetear();
+    });
+  }
+</script>
+
+<style>
+  /* Selector segmentado de modo (mismo patrón que las demos anteriores). */
+  .modo-selector {
+    display: inline-flex;
+    gap: var(--esp-xs);
+  }
+
+  .modo-selector .demo-boton.roto {
+    background: var(--fondo);
+    color: var(--error);
+    border-color: var(--error);
+  }
+
+  .modo-selector .demo-boton.roto.activo {
+    background: var(--error);
+    color: var(--papel);
+  }
+
+  .modo-selector .demo-boton.solucion {
+    background: var(--fondo);
+    color: var(--acento);
+    border-color: var(--acento);
+  }
+
+  .modo-selector .demo-boton.solucion.activo {
+    background: var(--acento);
+    color: var(--papel);
+  }
+
+  .modo-selector .demo-boton:not(.activo) {
+    opacity: 0.7;
+  }
+
+  /* Panel de resultados: solo la columna del modo activo. */
+  .panel-resultados {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--esp-lg);
+  }
+
+  .panel-resultados[data-modo="roto"] .columna.solucion,
+  .panel-resultados[data-modo="solucion"] .columna.roto {
+    display: none;
+  }
+
+  .columna {
+    display: flex;
+    flex-direction: column;
+    gap: var(--esp-sm);
+    padding: var(--esp-md);
+    border: 2px solid var(--texto);
+    border-radius: var(--radio-md);
+    min-width: 0;
+  }
+
+  .columna.roto {
+    border-color: var(--error);
+  }
+
+  .columna.solucion {
+    border-color: var(--acento);
+  }
+
+  .cabecera-columna {
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-000);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding-bottom: var(--esp-xs);
+    border-bottom: 1px solid currentColor;
+  }
+
+  .columna.roto .cabecera-columna {
+    color: var(--error);
+  }
+
+  .columna.solucion .cabecera-columna {
+    color: var(--acento);
+  }
+
+  .stats-columna {
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-00);
+    color: var(--texto);
+  }
+
+  .stats-columna :global(strong) {
+    color: var(--acento);
+  }
+
+  /* Contenedor scrollable con la lista + centinela dentro. */
+  .scroll-contenedor-inf {
+    height: 18rem;
+    overflow-y: auto;
+    border: 1px solid color-mix(in srgb, var(--texto) 20%, transparent);
+    border-radius: var(--radio-sm);
+  }
+
+  .lista-articulos {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .lista-articulos :global(.articulo-cargado) {
+    padding: var(--esp-xs) var(--esp-sm);
+    margin: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--texto) 8%, transparent);
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-00);
+  }
+
+  .centinela {
+    padding: var(--esp-sm);
+    background: color-mix(in srgb, var(--texto) 6%, transparent);
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-000);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-align: center;
+    color: color-mix(in srgb, var(--texto) 60%, transparent);
+    border-top: 1px dashed color-mix(in srgb, var(--texto) 30%, transparent);
+  }
+</style>

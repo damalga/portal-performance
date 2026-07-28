@@ -1,5 +1,5 @@
 ---
-type Tipo = "info" | "advertencia" | "truco" | "error";
+type Tipo = "info" | "truco" | "error";
 
 interface Props {
   tipo?: Tipo;
@@ -10,16 +10,12 @@ const { tipo = "info", titulo } = Astro.props;
 
 const etiquetas: Record<Tipo, string> = {
   info: "Nota",
-  advertencia: "Aviso",
   truco: "Truco",
   error: "Atención",
 };
-
-const etiqueta = titulo ?? etiquetas[tipo];
 ---
 
-<aside class:list={["nota", tipo]} role="note" aria-label={etiqueta}>
-  <p class="etiqueta">{etiqueta}</p>
+<aside class:list={["nota", tipo]} role="note">
   <div class="cuerpo">
     <slot />
   </div>
@@ -41,9 +37,6 @@ const etiqueta = titulo ?? etiquetas[tipo];
 
   .nota.info {
     --marca: var(--acento);
-  }
-  .nota.advertencia {
-    --marca: var(--destacado);
   }
   .nota.truco {
     --marca: var(--exito);

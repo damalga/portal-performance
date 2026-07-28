@@ -1,8 +1,8 @@
 const container = document.getElementById("list");
+const items = [];
 
 for (let i = 0; i < 500; i++) {
   const item = document.createElement("div");
-  const items = [];
 
   item.textContent = "Elemento " + i;
   items.push(item);

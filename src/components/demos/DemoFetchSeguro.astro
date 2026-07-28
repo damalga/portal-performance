@@ -1,0 +1,186 @@
+---
+import Nota from "../Nota.astro";
+---
+
+<section id="demo-fetch-seguro" class="demo-panel" aria-labelledby="demo-fetch-seguro-titulo">
+  <header class="demo-titulo">
+    <span class="demo-etiqueta">Pruébalo</span>
+    <h3 id="demo-fetch-seguro-titulo">Datos que llegan sin <code>profile</code></h3>
+  </header>
+
+  <p class="demo-intro">
+    Un <code>fetch</code> simulado devuelve un objeto sin <code>profile</code>.
+    La versión rota accede a <code>user.profile.name</code> y se rompe con un
+    <code>TypeError</code> — que en tu app real sería un
+    <code>Uncaught (in promise)</code> silencioso en la consola. La versión con
+    <code>?.</code>, <code>??</code> y <code>.catch</code> devuelve "Anónimo" y
+    sigue funcionando.
+  </p>
+
+  <Nota tipo="info">
+    <p>
+      Los crashes de la versión rota los interceptamos aquí para poder pintarlos
+      en la tarjeta. En tu app real serían un
+      <code>Uncaught (in promise)</code> en consola: peor porque no se ven.
+    </p>
+  </Nota>
+
+  <div class="demo-controles" role="group" aria-label="Comparativa">
+    <button type="button" data-accion="roto" class="demo-boton roto">
+      Sin ?. ni catch (código roto)
+    </button>
+    <button type="button" data-accion="solucion" class="demo-boton solucion">
+      Con ?., ?? y catch
+    </button>
+    <output id="demo-fetch-seguro-estado" class="demo-output" aria-live="polite">
+      <span class="demo-medida-placeholder">esperando</span>
+    </output>
+    <button type="button" data-accion="reset" class="demo-boton reset"> Reset </button>
+  </div>
+
+  <div id="demo-fetch-seguro-tarjeta" class="tarjeta-usuario" aria-live="polite">
+    <span class="etiqueta-tarjeta">Nombre de usuario</span>
+    <span class="nombre-tarjeta">—</span>
+  </div>
+</section>
+
+<script>
+  /* Demo interactiva del ejercicio 2 (fetch-seguro).
+   * fetchMock devuelve siempre {} (escenario sin profile).
+   * Rota: user.profile.name sin ?., sin ??, sin catch → TypeError.
+   * Solución: user?.profile?.name ?? "Anónimo" + .catch → cae a "Anónimo". */
+  async function fetchMock() {
+    await new Promise((r) => setTimeout(r, 80));
+    return { ok: true, json: async () => ({}) as unknown };
+  }
+
+  const seccion = document.getElementById("demo-fetch-seguro");
+  const tarjeta = document.getElementById("demo-fetch-seguro-tarjeta");
+  const estado = document.getElementById("demo-fetch-seguro-estado");
+  const controles = seccion?.querySelector<HTMLDivElement>(".demo-controles");
+  const etiquetaEl = tarjeta?.querySelector<HTMLElement>(".etiqueta-tarjeta");
+  const nombreEl = tarjeta?.querySelector<HTMLElement>(".nombre-tarjeta");
+
+  function pintarNombre(nombre: string) {
+    if (etiquetaEl) etiquetaEl.textContent = "Nombre de usuario";
+    if (nombreEl) nombreEl.textContent = nombre;
+    tarjeta?.classList.remove("crash");
+  }
+
+  function pintarCrash(mensaje: string) {
+    if (etiquetaEl) etiquetaEl.textContent = "Crash sin capturar";
+    if (nombreEl) nombreEl.textContent = mensaje;
+    tarjeta?.classList.add("crash");
+  }
+
+  function setEstado(html: string) {
+    if (estado) estado.innerHTML = html;
+  }
+
+  function limpiar() {
+    pintarNombre("—");
+    setEstado(`<span class="demo-medida-placeholder">esperando</span>`);
+  }
+
+  // Rota (literal): mostrarUsuario sin ?. ni ??, y sin .catch en la cadena.
+  function mostrarUsuarioRoto(user: unknown) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    pintarNombre((user as any).profile.name);
+  }
+
+  async function ejecutarRoto() {
+    limpiar();
+    setEstado(`<span class="demo-medida-placeholder">Cargando (roto)…</span>`);
+    // try/catch externo solo para poder pintar el error en el demo; en tu app
+    // real este error sería un Uncaught (in promise) en la consola.
+    try {
+      const res = await fetchMock();
+      const user = await res.json();
+      mostrarUsuarioRoto(user);
+      setEstado(`<strong>OK</strong> · sin errores`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      pintarCrash(msg);
+      setEstado(`<strong>Sin capturar</strong> · en tu app sería Uncaught (in promise)`);
+    }
+  }
+
+  // Solución (literal): ?., ??, y .catch en la cadena.
+  function mostrarUsuarioSeguro(user: unknown) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    pintarNombre((user as any)?.profile?.name ?? "Anónimo");
+  }
+
+  async function ejecutarSolucion() {
+    limpiar();
+    setEstado(`<span class="demo-medida-placeholder">Cargando (solución)…</span>`);
+    try {
+      const res = await fetchMock();
+      const user = await res.json();
+      mostrarUsuarioSeguro(user);
+      setEstado(`<strong>OK</strong> · con fallback`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      pintarNombre("Anónimo");
+      setEstado(`<strong>Error capturado</strong> · ${msg}`);
+    }
+  }
+
+  if (controles && tarjeta && estado) {
+    controles.addEventListener("click", (e) => {
+      const boton = (e.target as Element)?.closest<HTMLButtonElement>("button[data-accion]");
+      if (!boton) return;
+      if (boton.dataset.accion === "reset") return limpiar();
+      if (boton.dataset.accion === "roto") ejecutarRoto();
+      else ejecutarSolucion();
+    });
+  }
+</script>
+
+<style>
+  .tarjeta-usuario {
+    display: flex;
+    flex-direction: column;
+    gap: var(--esp-xs);
+    padding: var(--esp-lg);
+    border: 2px solid var(--texto);
+    border-radius: var(--radio-md);
+    background: var(--fondo);
+    min-height: 6rem;
+    transition:
+      border-color 150ms,
+      background 150ms;
+  }
+
+  .tarjeta-usuario.crash {
+    border-color: var(--error);
+    background: color-mix(in srgb, var(--error) 8%, transparent);
+  }
+
+  .etiqueta-tarjeta {
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-000);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: color-mix(in srgb, var(--texto) 60%, transparent);
+  }
+
+  .tarjeta-usuario.crash .etiqueta-tarjeta {
+    color: var(--error);
+  }
+
+  .nombre-tarjeta {
+    font-family: var(--fuente-display);
+    font-size: var(--paso-3);
+    font-weight: 700;
+    line-height: var(--lh-corto);
+    word-break: break-word;
+  }
+
+  .tarjeta-usuario.crash .nombre-tarjeta {
+    color: var(--error);
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-00);
+    font-weight: 400;
+  }
+</style>

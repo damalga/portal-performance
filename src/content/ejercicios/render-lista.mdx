@@ -4,8 +4,6 @@ orden: 1
 categoria: dom
 resumen: "Meter 500 nodos uno a uno provoca 500 recálculos. Cómo bajar a uno."
 conceptos: ["reflow", "batching", "DocumentFragment"]
-dificultad: 1
-minutos: 6
 quiz:
   - pregunta: "¿Por qué es lento insertar 500 nodos con appendChild dentro de un bucle?"
     opciones:
@@ -50,6 +48,7 @@ quiz:
 ---
 
 import Solucion from "../../components/Solucion.astro";
+import DemoRenderLista from "../../components/demos/DemoRenderLista.astro";
 
 ## El problema
 
@@ -121,3 +120,5 @@ spread lee bien y no necesita conocerlo. Cualquiera vale, siempre que se
 pase de N mutaciones a una.
 
 </Solucion>
+
+<DemoRenderLista />

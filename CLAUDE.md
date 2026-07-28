@@ -38,7 +38,7 @@ Definido en el brief (sección 2). Resumen operativo:
 - Astro como framework base, renderizado estático.
 - **Preact** para las islas interactivas (el quiz de los 8 ejercicios). Vanilla JS para el resto de interactividad (barra de progreso, scroll infinito, buscador, delegación, `<details>`). **Vue queda fuera del stack**: desviación deliberada respecto al brief para reforzar la tesis de performance (Preact ~3KB gzip). Ver `SETUP.md` §2.
 - Content collections con schema Zod para los artículos.
-- Estilos: **SCSS** en archivos independientes (`src/styles/*.scss` y CSS Modules `*.module.scss`), con anidación y `@use`. **CSS plano** en los `<style>` de componentes `.astro` (scoped por Astro). Sin Tailwind ni librerías de UI. Tokens de color en `src/styles/_tokens.scss` — ningún hex suelto fuera de ahí.
+- Estilos: **SCSS** en archivos independientes (`src/styles/*.scss`), con anidación y `@use`. **CSS plano** en los `<style>` de componentes `.astro` (scoped por Astro). Islas `.tsx` (Quiz): estilos inline en el propio componente como `<style>{...}</style>`, namespaced bajo la clase raíz (`.quiz`) para evitar colisiones. Sin Tailwind ni librerías de UI. Tokens de color en `src/styles/_tokens.scss` — ningún hex suelto fuera de ahí.
 
 Cuando el proyecto esté andamiado, los comandos habituales serán `npm run dev` / `npm run build` / `npm run preview` (Astro estándar). Si añades linter o tests, documéntalos aquí.
 

@@ -15,8 +15,6 @@ const ejercicios = defineCollection({
     categoria: z.enum(["dom", "eventos", "datos", "metricas"]),
     resumen: z.string(),
     conceptos: z.array(z.string()).min(1),
-    dificultad: z.union([z.literal(1), z.literal(2), z.literal(3)]),
-    minutos: z.number().int().positive(),
     quiz: z.array(preguntaSchema).length(5),
   }),
 });

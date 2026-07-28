@@ -1,5 +1,4 @@
 import { useState } from "preact/hooks";
-import estilos from "./Quiz.module.scss";
 
 interface Pregunta {
   pregunta: string;
@@ -37,67 +36,208 @@ export default function Quiz({ preguntas }: Props) {
   }
 
   return (
-    <section class={estilos.quiz} aria-labelledby="quiz-titulo">
-      <h2 id="quiz-titulo" class={estilos.titulo}>
-        Comprueba lo que has aprendido
-      </h2>
+    <>
+      <section class="quiz" aria-labelledby="quiz-titulo">
+        <h2 id="quiz-titulo" class="titulo">
+          Comprueba lo que has aprendido
+        </h2>
 
-      <ol class={estilos.lista}>
-        {preguntas.map((p, i) => (
-          <li key={i} class={estilos.pregunta}>
-            <p class={estilos.enunciado}>
-              <span class={estilos.numero}>{i + 1}.</span> {p.pregunta}
-            </p>
-            <ul class={estilos.opciones} role="radiogroup" aria-label={p.pregunta}>
-              {p.opciones.map((op, j) => {
-                const elegida = respuestas[i] === j;
-                const correcta = enviado && j === p.correcta;
-                const fallo = enviado && elegida && j !== p.correcta;
-                const clase = [
-                  estilos.opcion,
-                  elegida && estilos.elegida,
-                  correcta && estilos.correcta,
-                  fallo && estilos.fallo,
-                ]
-                  .filter(Boolean)
-                  .join(" ");
-                return (
-                  <li key={j}>
-                    <label class={clase}>
-                      <input
-                        type="radio"
-                        name={`pregunta-${i}`}
-                        checked={elegida}
-                        disabled={enviado}
-                        onChange={() => elegir(i, j)}
-                      />
-                      <span>{op}</span>
-                    </label>
-                  </li>
-                );
-              })}
-            </ul>
-          </li>
-        ))}
-      </ol>
+        <ol class="lista">
+          {preguntas.map((p, i) => (
+            <li key={i} class="pregunta">
+              <p class="enunciado">
+                <span class="numero">{i + 1}.</span> {p.pregunta}
+              </p>
+              <ul class="opciones" role="radiogroup" aria-label={p.pregunta}>
+                {p.opciones.map((op, j) => {
+                  const elegida = respuestas[i] === j;
+                  const correcta = enviado && j === p.correcta;
+                  const fallo = enviado && elegida && j !== p.correcta;
+                  const clase = [
+                    "opcion",
+                    elegida && "elegida",
+                    correcta && "correcta",
+                    fallo && "fallo",
+                  ]
+                    .filter(Boolean)
+                    .join(" ");
+                  return (
+                    <li key={j}>
+                      <label class={clase}>
+                        <input
+                          type="radio"
+                          name={`pregunta-${i}`}
+                          checked={elegida}
+                          disabled={enviado}
+                          onChange={() => elegir(i, j)}
+                        />
+                        <span>{op}</span>
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+            </li>
+          ))}
+        </ol>
 
-      <footer class={estilos.pie}>
-        {!enviado && (
-          <button type="button" class={estilos.boton} disabled={!completo} onClick={enviar}>
-            {completo ? "Corregir" : `Faltan ${respuestas.filter((r) => r === null).length}`}
-          </button>
-        )}
-        {enviado && (
-          <div class={estilos.resultado}>
-            <p class={estilos.puntuacion}>
-              {acertadas} de {preguntas.length} correctas
-            </p>
-            <button type="button" class={estilos.boton} onClick={reintentar}>
-              Reintentar
+        <footer class="pie">
+          {!enviado && (
+            <button type="button" class="boton" disabled={!completo} onClick={enviar}>
+              {completo ? "Corregir" : `Faltan ${respuestas.filter((r) => r === null).length}`}
             </button>
-          </div>
-        )}
-      </footer>
-    </section>
+          )}
+          {enviado && (
+            <div class="resultado">
+              <p class="puntuacion">
+                {acertadas} de {preguntas.length} correctas
+              </p>
+              <button type="button" class="boton" onClick={reintentar}>
+                Reintentar
+              </button>
+            </div>
+          )}
+        </footer>
+      </section>
+
+      <style>{estilos}</style>
+    </>
   );
 }
+
+/*
+ * Estilos de la isla Preact. Un .tsx no admite <style> scoped como .astro,
+ * así que se inyectan aquí como <style> global. Todos los selectores viven
+ * bajo `.quiz` para evitar colisiones con clases genéricas del resto del sitio.
+ */
+const estilos = `
+  .quiz {
+    border-top: 4px solid var(--acento);
+    padding-top: var(--esp-xl);
+    margin-top: var(--esp-2xl);
+  }
+
+  .quiz .titulo {
+    font-family: var(--fuente-display);
+    font-size: var(--paso-3);
+    line-height: var(--lh-medio);
+    margin-bottom: var(--esp-lg);
+  }
+
+  .quiz .lista {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--esp-xl);
+  }
+
+  .quiz .pregunta {
+    display: flex;
+    flex-direction: column;
+    gap: var(--esp-sm);
+  }
+
+  .quiz .enunciado {
+    font-family: var(--fuente-texto);
+    font-size: var(--paso-1);
+    font-weight: 600;
+    margin: 0;
+    max-width: none;
+  }
+
+  .quiz .numero {
+    font-family: var(--fuente-mono);
+    color: var(--acento);
+    margin-right: var(--esp-xs);
+  }
+
+  .quiz .opciones {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--esp-xs);
+  }
+
+  .quiz .opcion {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--esp-sm);
+    padding: var(--esp-sm) var(--esp-md);
+    border: 2px solid var(--texto);
+    border-radius: var(--radio-md);
+    cursor: pointer;
+    background: var(--fondo);
+    transition:
+      background 120ms,
+      border-color 120ms;
+  }
+
+  .quiz .opcion:hover:not(:has(input:disabled)) {
+    border-color: var(--acento);
+  }
+
+  .quiz .opcion input {
+    margin-top: 0.2em;
+    accent-color: var(--acento);
+  }
+
+  .quiz .opcion.elegida {
+    border-color: var(--acento);
+    background: color-mix(in srgb, var(--acento) 10%, transparent);
+  }
+
+  .quiz .opcion.correcta {
+    border-color: var(--exito);
+    background: color-mix(in srgb, var(--exito) 12%, transparent);
+  }
+
+  .quiz .opcion.fallo {
+    border-color: var(--error);
+    background: color-mix(in srgb, var(--error) 12%, transparent);
+  }
+
+  .quiz .pie {
+    margin-top: var(--esp-xl);
+  }
+
+  .quiz .boton {
+    font-family: var(--fuente-display);
+    font-weight: 700;
+    font-size: var(--paso-1);
+    padding: var(--esp-sm) var(--esp-lg);
+    background: var(--acento);
+    color: var(--papel);
+    border: 2px solid var(--acento);
+    border-radius: var(--radio-md);
+    cursor: pointer;
+    transition: transform 100ms;
+  }
+
+  .quiz .boton:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+
+  .quiz .boton:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .quiz .resultado {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--esp-md);
+    flex-wrap: wrap;
+  }
+
+  .quiz .puntuacion {
+    font-family: var(--fuente-display);
+    font-size: var(--paso-2);
+    font-weight: 700;
+    margin: 0;
+  }
+`;

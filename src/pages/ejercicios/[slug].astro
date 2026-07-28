@@ -2,7 +2,6 @@
 import { getCollection, render } from "astro:content";
 import Articulo from "../../layouts/Articulo.astro";
 import Quiz from "../../components/Quiz";
-import EnAccionCta from "../../components/EnAccionCta.astro";
 
 export async function getStaticPaths() {
   const entradas = await getCollection("ejercicios");
@@ -23,6 +22,5 @@ const { Content } = await render(entrada);
   conceptos={entrada.data.conceptos}
 >
   <Content />
-  <EnAccionCta slug={entrada.id} />
   <Quiz preguntas={entrada.data.quiz} client:visible />
 </Articulo>

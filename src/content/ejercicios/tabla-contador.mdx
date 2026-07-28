@@ -4,8 +4,6 @@ orden: 4
 categoria: dom
 resumen: "Actualizar un contador en cada iteración cuando el total ya se sabe de golpe."
 conceptos: ["debounce", "batching", "trabajo dentro del bucle"]
-dificultad: 1
-minutos: 6
 quiz:
   - pregunta: "¿Por qué actualizar `contador.textContent` dentro del bucle es un problema?"
     opciones:
@@ -119,9 +117,7 @@ input.addEventListener("input", (e) => {
   timeout = setTimeout(() => {
     const query = e.target.value.toLowerCase();
     const filtrados = articulos.filter((art) => art.titulo.toLowerCase().includes(query));
-    tbody.innerHTML = filtrados
-      .map((art) => `<tr><td>${art.titulo}</td><td>${art.categoria}</td></tr>`)
-      .join("");
+    tbody.innerHTML = filtrados.map((art) => `<tr><td>${art.titulo}</td><td>${art.categoria}</td></tr>`).join("");
     contador.textContent = "Resultados: " + filtrados.length;
   }, 200);
 });

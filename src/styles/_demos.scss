@@ -1,0 +1,149 @@
+/*
+ * Estilos compartidos por las demos interactivas embebidas en artículos.
+ * Prefijo `demo-` para evitar colisiones con las clases scoped de otros
+ * componentes (layout, artículo, marca, etc.).
+ * Cada demo añade sus estilos específicos en su propio <style> scoped.
+ */
+
+.demo-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-md);
+  padding: var(--esp-lg);
+  margin: var(--esp-2xl) 0;
+  border: 2px solid var(--texto);
+  border-radius: var(--radio-md);
+  background: var(--fondo);
+}
+
+.demo-titulo {
+  display: flex;
+  align-items: baseline;
+  gap: var(--esp-sm);
+  flex-wrap: wrap;
+}
+
+.demo-titulo h3 {
+  font-family: var(--fuente-display);
+  font-size: var(--paso-2);
+  line-height: var(--lh-corto);
+  margin: 0;
+}
+
+.demo-etiqueta {
+  font-family: var(--fuente-mono);
+  font-size: var(--paso-000);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: var(--esp-2xs) var(--esp-xs);
+  background: var(--destacado);
+  color: var(--tinta);
+  border-radius: var(--radio-sm);
+}
+
+.demo-intro {
+  font-size: var(--paso-0);
+  line-height: var(--lh-largo);
+  margin: 0;
+  max-width: none;
+
+  code {
+    font-family: var(--fuente-mono);
+    font-size: 0.95em;
+    padding: 0 var(--esp-2xs);
+    background: var(--publi);
+    border: 1px solid color-mix(in srgb, var(--texto) 20%, transparent);
+    border-radius: var(--radio-sm);
+  }
+}
+
+.demo-controles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-sm);
+  padding: var(--esp-md);
+  border: 1px solid var(--texto);
+  border-radius: var(--radio-md);
+  background: color-mix(in srgb, var(--texto) 4%, transparent);
+}
+
+.demo-cantidad {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--esp-xs);
+  font-family: var(--fuente-mono);
+  font-size: var(--paso-000);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  select {
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-00);
+    padding: var(--esp-2xs) var(--esp-xs);
+    border: 1px solid var(--texto);
+    border-radius: var(--radio-sm);
+    background: var(--fondo);
+    color: var(--texto);
+  }
+}
+
+.demo-boton {
+  font-family: var(--fuente-display);
+  font-weight: 700;
+  font-size: var(--paso-00);
+  padding: var(--esp-xs) var(--esp-md);
+  border: 2px solid var(--tinta);
+  border-radius: var(--radio-sm);
+  cursor: pointer;
+  transition:
+    transform 100ms,
+    background 100ms;
+
+  &.roto {
+    background: var(--fondo);
+    color: var(--error);
+    border-color: var(--error);
+
+    &:hover {
+      background: var(--error);
+      color: var(--papel);
+    }
+  }
+
+  &.solucion {
+    background: var(--acento);
+    color: var(--papel);
+    border-color: var(--acento);
+
+    &:hover {
+      transform: translateY(-1px);
+    }
+  }
+
+  &.reset {
+    background: var(--fondo);
+    color: var(--texto);
+    border-color: var(--texto);
+
+    &:hover {
+      background: var(--texto);
+      color: var(--fondo);
+    }
+  }
+}
+
+.demo-output {
+  font-family: var(--fuente-mono);
+  font-size: var(--paso-00);
+  padding: var(--esp-2xs) var(--esp-sm);
+  margin-left: auto;
+
+  strong {
+    color: var(--acento);
+  }
+}
+
+.demo-medida-placeholder {
+  opacity: 0.5;
+}

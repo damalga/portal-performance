@@ -1,0 +1,258 @@
+---
+import Nota from "../Nota.astro";
+---
+
+<section
+  id="demo-buscador-debounce"
+  class="demo-panel"
+  aria-labelledby="demo-buscador-debounce-titulo"
+>
+  <header class="demo-titulo">
+    <span class="demo-etiqueta">Pruébalo</span>
+    <h3 id="demo-buscador-debounce-titulo">Filtrar en cada tecla vs debounce</h3>
+  </header>
+
+  <p class="demo-intro">
+    Un solo input, dos columnas. La izquierda filtra en <em>cada</em> pulsación
+    con <code>innerHTML +=</code> dentro del bucle. La derecha lo hace con
+    <code>setTimeout</code>/<code>clearTimeout</code> a 200ms y una sola
+    asignación con <code>map().join("")</code>. Escribe algo con la lista en
+    1.000 elementos y mira los contadores: la columna roja dispara N veces
+    (una por letra); la azul, una sola vez cuando paras.
+  </p>
+
+  <Nota tipo="info">
+    <p>
+      Con la lista pequeña (5 elementos) las dos columnas se sienten iguales.
+      Sube a 1.000 y la diferencia se nota al ojo, no solo en el contador: la
+      columna sin debounce se engancha mientras escribes; la debounced no.
+    </p>
+  </Nota>
+
+  <div class="demo-controles" role="group" aria-label="Comparativa">
+    <label class="demo-cantidad">
+      <span>Productos</span>
+      <select id="demo-buscador-debounce-cantidad">
+        <option value="5">5</option>
+        <option value="100">100</option>
+        <option value="1000" selected>1.000</option>
+      </select>
+    </label>
+    <input
+      type="text"
+      id="demo-buscador-debounce-input"
+      class="input-buscador"
+      placeholder="Escribe para filtrar..."
+      autocomplete="off"
+      spellcheck="false"
+    />
+    <button type="button" data-accion="reset" class="demo-boton reset"> Reset </button>
+  </div>
+
+  <div class="dos-columnas">
+    <div class="columna roto">
+      <div class="cabecera-columna">Sin debounce · innerHTML += en bucle</div>
+      <div class="stats-columna" id="demo-buscador-debounce-stats-roto">
+        Filtros: 0 · último: — ms
+      </div>
+      <div
+        id="demo-buscador-debounce-lista-roto"
+        class="lista-buscador"
+        aria-label="Resultados sin debounce"
+      >
+      </div>
+    </div>
+    <div class="columna solucion">
+      <div class="cabecera-columna">Con debounce 200ms · map().join("")</div>
+      <div class="stats-columna" id="demo-buscador-debounce-stats-solucion">
+        Filtros: 0 · último: — ms
+      </div>
+      <div
+        id="demo-buscador-debounce-lista-solucion"
+        class="lista-buscador"
+        aria-label="Resultados con debounce"
+      >
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  /* Demo interactiva del ejercicio 3 (buscador-debounce).
+   * Un input dispara los dos handlers, cada uno sobre su propia lista.
+   * Rota: filtra en cada input con innerHTML += dentro del bucle.
+   * Solución: debounce 200ms + una asignación con map/join. */
+  const seccion = document.getElementById("demo-buscador-debounce");
+  const inputBuscador = document.getElementById(
+    "demo-buscador-debounce-input",
+  ) as HTMLInputElement | null;
+  const cantidadSelector = document.getElementById(
+    "demo-buscador-debounce-cantidad",
+  ) as HTMLSelectElement | null;
+  const controles = seccion?.querySelector<HTMLDivElement>(".demo-controles");
+  const listaRoto = document.getElementById("demo-buscador-debounce-lista-roto");
+  const listaSolucion = document.getElementById("demo-buscador-debounce-lista-solucion");
+  const statsRotoEl = document.getElementById("demo-buscador-debounce-stats-roto");
+  const statsSolucionEl = document.getElementById("demo-buscador-debounce-stats-solucion");
+
+  let productos: string[] = [];
+  let filtrosRoto = 0;
+  let filtrosSolucion = 0;
+
+  function generarProductos(cantidad: number) {
+    return Array.from({ length: cantidad }, (_, i) => `Elemento ${i + 1}`);
+  }
+
+  function pintarStats(quien: "roto" | "solucion", ms: number) {
+    const el = quien === "roto" ? statsRotoEl : statsSolucionEl;
+    const veces = quien === "roto" ? filtrosRoto : filtrosSolucion;
+    if (el) el.textContent = `Filtros: ${veces} · último: ${ms.toFixed(1)} ms`;
+  }
+
+  // Rota: filtra y pinta en cada evento input, con innerHTML += en el bucle.
+  function filtrarRoto(query: string) {
+    if (!listaRoto) return;
+    filtrosRoto++;
+    const t0 = performance.now();
+    const q = query.toLowerCase();
+    listaRoto.innerHTML = "";
+    productos
+      .filter((p) => p.toLowerCase().includes(q))
+      .forEach((p) => {
+        listaRoto.innerHTML += "<div>" + p + "</div>";
+      });
+    pintarStats("roto", performance.now() - t0);
+  }
+
+  // Solución: timeout fuera (vive entre llamadas) + una sola asignación con
+  // map/join tras la pausa de 200ms.
+  let timeoutSolucion: ReturnType<typeof setTimeout> | null = null;
+  function filtrarSolucion(query: string) {
+    if (timeoutSolucion) clearTimeout(timeoutSolucion);
+    timeoutSolucion = setTimeout(() => {
+      if (!listaSolucion) return;
+      filtrosSolucion++;
+      const t0 = performance.now();
+      const q = query.toLowerCase().trim();
+      listaSolucion.innerHTML = productos
+        .filter((p) => p.toLowerCase().includes(q))
+        .map((p) => `<div>${p}</div>`)
+        .join("");
+      pintarStats("solucion", performance.now() - t0);
+    }, 200);
+  }
+
+  function resetear() {
+    const cantidad = Number(cantidadSelector?.value ?? 1000);
+    productos = generarProductos(cantidad);
+    filtrosRoto = 0;
+    filtrosSolucion = 0;
+    if (timeoutSolucion) clearTimeout(timeoutSolucion);
+    pintarStats("roto", 0);
+    pintarStats("solucion", 0);
+    if (listaRoto) listaRoto.innerHTML = "";
+    if (listaSolucion) listaSolucion.innerHTML = "";
+    if (inputBuscador) inputBuscador.value = "";
+  }
+
+  if (inputBuscador && controles && cantidadSelector) {
+    inputBuscador.addEventListener("input", (e) => {
+      const query = (e.target as HTMLInputElement).value;
+      filtrarRoto(query);
+      filtrarSolucion(query);
+    });
+    cantidadSelector.addEventListener("change", resetear);
+    controles.addEventListener("click", (e) => {
+      const boton = (e.target as Element)?.closest<HTMLButtonElement>("button[data-accion]");
+      if (boton?.dataset.accion === "reset") resetear();
+    });
+    resetear();
+  }
+</script>
+
+<style>
+  .input-buscador {
+    flex: 1;
+    min-width: 12ch;
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-0);
+    padding: var(--esp-xs) var(--esp-sm);
+    border: 1px solid var(--texto);
+    border-radius: var(--radio-sm);
+    background: var(--fondo);
+    color: var(--texto);
+  }
+
+  .input-buscador:focus-visible {
+    border-color: var(--acento);
+    outline: 2px solid var(--acento);
+    outline-offset: 1px;
+  }
+
+  .dos-columnas {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--esp-lg);
+  }
+
+  @media (max-width: 700px) {
+    .dos-columnas {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .columna {
+    display: flex;
+    flex-direction: column;
+    gap: var(--esp-sm);
+    padding: var(--esp-md);
+    border: 2px solid var(--texto);
+    border-radius: var(--radio-md);
+    min-width: 0;
+  }
+
+  .columna.roto {
+    border-color: var(--error);
+  }
+
+  .columna.solucion {
+    border-color: var(--acento);
+  }
+
+  .cabecera-columna {
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-000);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding-bottom: var(--esp-xs);
+    border-bottom: 1px solid currentColor;
+  }
+
+  .columna.roto .cabecera-columna {
+    color: var(--error);
+  }
+
+  .columna.solucion .cabecera-columna {
+    color: var(--acento);
+  }
+
+  .stats-columna {
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-00);
+    color: color-mix(in srgb, var(--texto) 70%, transparent);
+  }
+
+  .lista-buscador {
+    max-height: 20rem;
+    overflow-y: auto;
+    border: 1px solid color-mix(in srgb, var(--texto) 20%, transparent);
+    border-radius: var(--radio-sm);
+    padding: var(--esp-xs);
+  }
+
+  .lista-buscador :global(div) {
+    padding: var(--esp-2xs) var(--esp-xs);
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-00);
+  }
+</style>

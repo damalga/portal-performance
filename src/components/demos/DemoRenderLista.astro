@@ -1,0 +1,117 @@
+---
+import Nota from "../Nota.astro";
+---
+
+<section id="demo-render-lista" class="demo-panel" aria-labelledby="demo-render-lista-titulo">
+  <header class="demo-titulo">
+    <span class="demo-etiqueta">Pruébalo</span>
+    <h3 id="demo-render-lista-titulo">500 tarjetas, con y sin fragment</h3>
+  </header>
+
+  <p class="demo-intro">
+    Pulsa los dos botones y compara. Ambos meten 500 elementos en el DOM; la
+    diferencia está en cuántas veces el navegador tiene que replantear layout:
+    500 con la versión rota (una modificación por iteración), una sola con
+    <code>DocumentFragment</code>. Abre la pestaña <strong>Performance</strong>
+    de las devtools para verlo en el timeline.
+  </p>
+
+  <Nota tipo="info">
+    <p>
+      Los milisegundos del reloj son orientativos. Firefox y Safari reducen la
+      precisión de <code>performance.now()</code>, y Blink (Chromium) agrupa
+      mutaciones más agresivo que Gecko. La comparación honesta la enseña el
+      timeline en las líneas <em>Recalculate Style</em> y <em>Layout</em>.
+    </p>
+  </Nota>
+
+  <div class="demo-controles" role="group" aria-label="Comparativa">
+    <button type="button" data-accion="roto" class="demo-boton roto">
+      Sin fragment (código roto)
+    </button>
+    <button type="button" data-accion="solucion" class="demo-boton solucion">
+      Con DocumentFragment
+    </button>
+    <output id="demo-render-lista-medida" class="demo-output" aria-live="polite">
+      <span class="demo-medida-placeholder">— ms</span>
+    </output>
+    <button type="button" data-accion="reset" class="demo-boton reset"> Reset </button>
+  </div>
+
+  <div id="demo-render-lista-lista" class="lista-render" aria-label="Elementos pintados"></div>
+</section>
+
+<script>
+  /* Demo interactiva del ejercicio 1 (render-lista).
+   * Comparativa: N appendChild al DOM vs N appendChild a un DocumentFragment
+   * seguido de una única inserción. Delegación de eventos en los controles. */
+  const CANTIDAD = 500;
+  const seccion = document.getElementById("demo-render-lista");
+  const container = document.getElementById("demo-render-lista-lista");
+  const output = document.getElementById("demo-render-lista-medida");
+  const controles = seccion?.querySelector<HTMLDivElement>(".demo-controles");
+
+  function crearTarjeta(i: number) {
+    const item = document.createElement("div");
+    item.className = "tarjeta-demo";
+    item.textContent = "Elemento " + i;
+    return item;
+  }
+
+  function pintarSinFragment() {
+    if (!container) return 0;
+    container.textContent = "";
+    const t0 = performance.now();
+    for (let i = 0; i < CANTIDAD; i++) {
+      container.appendChild(crearTarjeta(i));
+    }
+    return performance.now() - t0;
+  }
+
+  function pintarConFragment() {
+    if (!container) return 0;
+    container.textContent = "";
+    const t0 = performance.now();
+    const fragment = document.createDocumentFragment();
+    for (let i = 0; i < CANTIDAD; i++) {
+      fragment.appendChild(crearTarjeta(i));
+    }
+    container.appendChild(fragment);
+    return performance.now() - t0;
+  }
+
+  function resetear() {
+    if (container) container.textContent = "";
+    if (output) output.innerHTML = `<span class="demo-medida-placeholder">— ms</span>`;
+  }
+
+  if (controles && output) {
+    controles.addEventListener("click", (e) => {
+      const boton = (e.target as Element)?.closest<HTMLButtonElement>("button[data-accion]");
+      if (!boton) return;
+      if (boton.dataset.accion === "reset") return resetear();
+      const ms = boton.dataset.accion === "roto" ? pintarSinFragment() : pintarConFragment();
+      const etiqueta = boton.dataset.accion === "roto" ? "sin fragment" : "con fragment";
+      output.innerHTML = `<strong>${ms.toFixed(1)} ms</strong> · ${etiqueta}`;
+    });
+  }
+</script>
+
+<style>
+  .lista-render {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: var(--esp-xs);
+    min-height: var(--esp-2xl);
+  }
+
+  .lista-render :global(.tarjeta-demo) {
+    padding: var(--esp-sm) var(--esp-md);
+    border: 1px solid var(--texto);
+    border-radius: var(--radio-sm);
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-00);
+    text-align: center;
+    background: var(--fondo);
+  }
+</style>

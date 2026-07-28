@@ -65,7 +65,6 @@ p,
 li {
   font-size: var(--paso-0);
   line-height: var(--lh-largo);
-  max-width: var(--col-prosa);
 }
 
 code,
@@ -78,7 +77,6 @@ samp {
 
 pre {
   line-height: var(--lh-medio);
-  max-width: var(--col-codigo);
   overflow-x: auto;
 }
 

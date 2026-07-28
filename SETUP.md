@@ -39,15 +39,14 @@ Ampliación sobre la sección 3 del brief:
 | Ruta | Propósito |
 |---|---|
 | `/` | Home: listado de ejercicios con scroll infinito real, huecos publicitarios cada 4. |
-| `/ejercicios/[slug]` | Ficha de cada uno de los 8 ejercicios (estructura fija: problema → código roto → pistas → solución → quiz). |
-| `/en-accion` | **[nuevo]** Página con mucho texto real donde los 8 patrones corren juntos, anotados con badge que enlaza al artículo. Es la máxima expresión del "el sitio predica lo que aplica". |
+| `/ejercicios/[slug]` | Ficha de cada uno de los 8 ejercicios (estructura: problema → código roto → pistas → solución → **demo interactiva embebida** → quiz). |
 | `/damalga` | **[nuevo]** About + entrevista formato Webedia sobre cómo se concibe un producto frontend en 2026, con web performance como bandera. |
 
-### Enlaces cruzados
+### Demos interactivas
 
-- Cada `/ejercicios/[slug]` incluye, tras el quiz, un CTA "ver este patrón integrado con los otros 7 →" que enlaza a `/en-accion#<slug>`.
-- Cada sección de `/en-accion` tiene `id="<slug>"` y un enlace "explicación completa →" que devuelve a `/ejercicios/<slug>`.
-- Header con nav mínimo: **Ejercicios** (`/`), **En acción** (`/en-accion`), **damalga** (`/damalga`).
+Cada ejercicio incluye, tras la sección de solución (dentro del propio `.mdx`), un panel `<DemoX />` con la comparativa **roto vs solución** funcionando en vivo: botones para disparar cada versión, reloj en ms, contenedor con el resultado. Los estilos comunes de estos paneles viven en `src/styles/_demos.scss` (clases prefijadas `demo-`); los específicos de cada demo, en el `<style>` scoped de su componente en `src/components/demos/`.
+
+Se descartó una página `/en-accion` que agrupaba las 8 demos: la comparativa gana pegada a su artículo, y evita duplicar la navegación cruzada.
 
 ---
 
@@ -60,22 +59,24 @@ src/
     config.ts            # schema de la collection
   components/
     ArticuloCard.astro
-    CodigoRoto.astro
     Solucion.astro
-    Quiz.tsx             # Preact, único isla interactivo (los 8 ejercicios)
+    Quiz.tsx             # Preact, única isla interactiva (los 8 ejercicios)
+    Nota.astro
     HuecoPublicidad.astro
     Centinela.astro
-    PlaceholderPortada.astro  # [nuevo] portada tipográfica sin archivo
-    EnAccionCta.astro    # [nuevo] CTA al final del articulo hacia /en-accion
+    PlaceholderPortada.astro
     Nav.astro
+    demos/
+      DemoRenderLista.astro
+      DemoFetchSeguro.astro
+      DemoBuscadorDebounce.astro
   layouts/
-    Base.astro           # html, head, fuentes, tokens, nav, footer
-    Articulo.astro       # extiende Base, añade barra de progreso, portada
+    Base.astro           # html, head, fuentes, tokens
+    Articulo.astro       # extiende Base, cabecera con portada, categoría y conceptos
   pages/
     index.astro
     ejercicios/[slug].astro
-    en-accion.astro      # [nuevo]
-    damalga.astro        # [nuevo]
+    damalga.astro        # [pendiente]
   scripts/
     scroll-infinito.js
     progreso-lectura.js
@@ -83,7 +84,8 @@ src/
     _tokens.scss         # colores, tipografía, espaciado, radios (partial)
     _reset.scss          # reset moderno Andy Bell-style (partial)
     _tipografia.scss     # @font-face, estilos base de texto (partial)
-    global.scss          # @use de los tres partials, se carga en Base.astro
+    _demos.scss          # estilos comunes de los paneles demo (partial)
+    global.scss          # @use de los partials, se carga en Base.astro
 public/
   api/
     articulos-1.json
@@ -101,8 +103,8 @@ Ningún hex ni `rgb()` suelto en componentes. Todo desde `_tokens.scss`.
 
 - **Globales** (`src/styles/`) en **SCSS**: `_tokens.scss`, `_reset.scss`, `_tipografia.scss` como partials, agregados desde `global.scss` con `@use`. Se importa una sola vez en `Base.astro`. Sass permite anidación con `&` y organización con `@use`/`@forward`.
 - **Componentes .astro**: `<style>` sin `lang` en cada componente. Astro los scopea por atributo automáticamente. **CSS plano** aquí, no SCSS (regla del proyecto: SCSS solo en archivos independientes). CSS moderno ya trae nesting nativo si se necesita.
-- **Isla Preact**: CSS Modules en `Quiz.module.scss`. Vite lo compila sin config extra al haber `sass` instalado.
-- **Cuándo añadir SCSS a un nuevo archivo global**: cualquier nuevo `src/styles/*.scss` va en SCSS por defecto. Si se acaba necesitando otro CSS Module en un componente, también en `.module.scss`.
+- **Isla Preact (`Quiz.tsx`)**: los estilos se inyectan **en el propio componente** como un `<style>` que la isla renderiza en el JSX, con todos los selectores namespaced bajo `.quiz` para evitar colisiones. Un `.tsx` no admite `<style>` scoped al modo Astro, y sacarlos a un `.module.scss` alejaba la CSS del componente sin ganar aislamiento real (el sitio solo tiene una instancia de Quiz por página). Convención: si aparece otra isla, mismo patrón — namespace por clase raíz.
+- **Cuándo añadir SCSS a un nuevo archivo global**: cualquier nuevo `src/styles/*.scss` va en SCSS por defecto.
 
 ---
 

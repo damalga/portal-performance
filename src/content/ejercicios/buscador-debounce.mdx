@@ -4,8 +4,6 @@ orden: 3
 categoria: eventos
 resumen: "El buscador filtra por pulsación y repinta con innerHTML sumado. Dos problemas distintos en el mismo listener."
 conceptos: ["debounce", "innerHTML", "DocumentFragment"]
-dificultad: 2
-minutos: 9
 quiz:
   - pregunta: '¿Qué problema tiene `lista.innerHTML += "<div>" + p + "</div>"` dentro de un bucle?'
     opciones:
@@ -50,6 +48,7 @@ quiz:
 ---
 
 import Solucion from "../../components/Solucion.astro";
+import DemoBuscadorDebounce from "../../components/demos/DemoBuscadorDebounce.astro";
 
 ## El problema
 
@@ -158,3 +157,5 @@ Sigue siendo una sola inserción al DOM, y ya no hay parseo de HTML
 en absoluto.
 
 </Solucion>
+
+<DemoBuscadorDebounce />

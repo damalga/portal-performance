@@ -4,8 +4,6 @@ orden: 8
 categoria: eventos
 resumen: "Un listener de scroll, un fetch por disparo, y un innerHTML que reparsea todo. Tres problemas, una solución con IntersectionObserver."
 conceptos: ["IntersectionObserver", "rootMargin", "condición de carrera", "insertAdjacentHTML"]
-dificultad: 3
-minutos: 12
 quiz:
   - pregunta: "¿Qué ventaja tiene IntersectionObserver frente a un listener de scroll para detectar si un centinela está en pantalla?"
     opciones:
@@ -105,10 +103,7 @@ const observer = new IntersectionObserver(
     fetch("/api/articulos?pagina=" + siguientePagina)
       .then((res) => res.json())
       .then((articulos) => {
-        lista.insertAdjacentHTML(
-          "beforeend",
-          articulos.map((a) => `<article>${a.titulo}</article>`).join(""),
-        );
+        lista.insertAdjacentHTML("beforeend", articulos.map((a) => `<article>${a.titulo}</article>`).join(""));
         siguientePagina++;
       })
       .finally(() => {

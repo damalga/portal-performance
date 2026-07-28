@@ -48,6 +48,7 @@ quiz:
 ---
 
 import Solucion from "../../components/Solucion.astro";
+import DemoDelegacionEventos from "../../components/demos/DemoDelegacionEventos.astro";
 
 ## El problema
 
@@ -61,7 +62,7 @@ crecen con la lista.
 Hay un patrón que resuelve las dos cosas a la vez, aprovechando algo
 que el DOM hace por defecto: los eventos burbujean.
 
-## El código roto
+## El código "roto"
 
 ```javascript
 const botones = document.querySelectorAll(".add-to-cart");
@@ -115,3 +116,5 @@ registrar nada. Es el patrón por defecto para cualquier UI con listas
 o grids interactivos.
 
 </Solucion>
+
+<DemoDelegacionEventos />

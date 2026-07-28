@@ -1,0 +1,465 @@
+---
+import Nota from "../Nota.astro";
+---
+
+<section
+  id="demo-delegacion-eventos"
+  class="demo-panel"
+  aria-labelledby="demo-delegacion-eventos-titulo"
+>
+  <header class="demo-titulo">
+    <span class="demo-etiqueta">Pruébalo</span>
+    <h3 id="demo-delegacion-eventos-titulo">
+      N listeners por botón vs delegación con <code>closest</code>
+    </h3>
+  </header>
+
+  <p class="demo-intro">
+    Cada botón tiene un icono (<code>+</code>) y un texto dentro. En modo
+    <em>sin delegación</em>: se registra un listener por botón, y
+    <code>e.target.dataset.id</code> devuelve <code>undefined</code> cuando
+    pulsas el icono o el texto (porque el target es el hijo, no el botón).
+    Además, si añades productos nuevos, sus botones no responden — nadie les
+    registró listener. En modo <em>con delegación</em>: un solo listener en el
+    contenedor con <code>closest(".add-to-cart")</code> resuelve las dos cosas.
+  </p>
+
+  <Nota tipo="info">
+    <p>
+      La stat <strong>Listeners activos</strong> lleva la cuenta manual de cada
+      <code>addEventListener</code> registrado. En sin delegación arranca en 6
+      (uno por botón inicial) y no crece nunca más — por eso los productos
+      añadidos después salen "muertos". En con delegación es siempre 1.
+    </p>
+  </Nota>
+
+  <div class="demo-controles" role="group" aria-label="Comparativa">
+    <div class="modo-selector" role="tablist" aria-label="Elegir modo">
+      <button
+        type="button"
+        data-modo="roto"
+        class="demo-boton roto"
+        role="tab"
+        aria-selected="false"
+      >
+        Sin delegación
+      </button>
+      <button
+        type="button"
+        data-modo="solucion"
+        class="demo-boton solucion activo"
+        role="tab"
+        aria-selected="true"
+      >
+        Con delegación
+      </button>
+    </div>
+    <button type="button" data-accion="anadir" class="demo-boton anadir">
+      Añadir 6 productos
+    </button>
+    <button type="button" data-accion="reset" class="demo-boton reset"> Reset </button>
+  </div>
+
+  <div class="panel-resultados" data-modo="solucion">
+    <div class="columna roto">
+      <div class="cabecera-columna">Sin delegación · un listener por botón, sin closest</div>
+      <div class="stats-columna" id="demo-delegacion-stats-roto">
+        Listeners activos: 0 · Handlers ejecutados: 0
+      </div>
+      <div
+        class="log-clicks"
+        id="demo-delegacion-log-roto"
+        aria-label="Últimos clicks (sin delegación)"
+      >
+      </div>
+      <div class="productos-grid" id="demo-delegacion-grid-roto"></div>
+    </div>
+    <div class="columna solucion">
+      <div class="cabecera-columna">Con delegación · un solo listener, closest para navegar</div>
+      <div class="stats-columna" id="demo-delegacion-stats-solucion">
+        Listeners activos: 0 · Handlers ejecutados: 0
+      </div>
+      <div
+        class="log-clicks"
+        id="demo-delegacion-log-solucion"
+        aria-label="Últimos clicks (con delegación)"
+      >
+      </div>
+      <div class="productos-grid" id="demo-delegacion-grid-solucion"></div>
+    </div>
+  </div>
+</section>
+
+<script>
+  /* Demo interactiva del ejercicio 6 (delegacion-eventos).
+   * Dos grids paralelos (roto/solución), estado de productos compartido.
+   * Sin delegación: se registra un listener por botón al montar y NUNCA
+   * se re-registra al añadir productos (esa es la pathology del ejercicio).
+   * Con delegación: un solo listener en el contenedor padre, closest sube
+   * al ancestro con .add-to-cart. Los nuevos botones funcionan sin
+   * registrar nada. */
+  type Modo = "roto" | "solucion";
+  const LOG_MAX = 5;
+  const INICIALES = 6;
+  const POR_TANDA = 6;
+
+  const seccion = document.getElementById("demo-delegacion-eventos");
+  const controles = seccion?.querySelector<HTMLDivElement>(".demo-controles");
+  const panelResultados = seccion?.querySelector<HTMLDivElement>(".panel-resultados");
+  const modoButtons = seccion?.querySelectorAll<HTMLButtonElement>(
+    ".modo-selector button[data-modo]",
+  );
+  const gridRoto = document.getElementById("demo-delegacion-grid-roto");
+  const gridSolucion = document.getElementById("demo-delegacion-grid-solucion");
+  const statsRotoEl = document.getElementById("demo-delegacion-stats-roto");
+  const statsSolucionEl = document.getElementById("demo-delegacion-stats-solucion");
+  const logRotoEl = document.getElementById("demo-delegacion-log-roto");
+  const logSolucionEl = document.getElementById("demo-delegacion-log-solucion");
+
+  let modoActivo: Modo = "solucion";
+  let productos: number[] = [];
+  let listenersRoto = 0;
+  let handlersRoto = 0;
+  let listenersSolucion = 0;
+  let handlersSolucion = 0;
+  const logRoto: { texto: string; ok: boolean }[] = [];
+  const logSolucion: { texto: string; ok: boolean }[] = [];
+
+  function pintarStats(modo: Modo) {
+    const el = modo === "roto" ? statsRotoEl : statsSolucionEl;
+    const listeners = modo === "roto" ? listenersRoto : listenersSolucion;
+    const handlers = modo === "roto" ? handlersRoto : handlersSolucion;
+    if (el) el.textContent = `Listeners activos: ${listeners} · Handlers ejecutados: ${handlers}`;
+  }
+
+  function pintarLog(modo: Modo) {
+    const el = modo === "roto" ? logRotoEl : logSolucionEl;
+    const entries = modo === "roto" ? logRoto : logSolucion;
+    if (!el) return;
+    if (entries.length === 0) {
+      el.innerHTML = '<span class="log-vacio">Pulsa un botón para ver el log</span>';
+      return;
+    }
+    el.innerHTML = entries
+      .map((e) => `<div class="log-entry ${e.ok ? "ok" : "err"}">${e.texto}</div>`)
+      .join("");
+  }
+
+  function anadirAlLog(modo: Modo, texto: string, ok: boolean) {
+    const log = modo === "roto" ? logRoto : logSolucion;
+    log.unshift({ texto, ok });
+    if (log.length > LOG_MAX) log.length = LOG_MAX;
+    pintarLog(modo);
+  }
+
+  // Roto (literal del ejercicio): e.target.dataset.id, sin closest.
+  function handleClickRoto(e: Event) {
+    handlersRoto++;
+    const target = e.target as HTMLElement;
+    const id = (target as HTMLElement & { dataset: DOMStringMap }).dataset.id;
+    if (id) {
+      anadirAlLog("roto", `id: ${id} · handler OK`, true);
+    } else {
+      const donde =
+        target.tagName === "SPAN" ? `&lt;span class="${target.className}"&gt;` : target.tagName;
+      anadirAlLog(
+        "roto",
+        `id: <em>undefined</em> · e.target = ${donde} (el hijo, no el botón)`,
+        false,
+      );
+    }
+    pintarStats("roto");
+  }
+
+  // Solución (literal): un listener en el contenedor + closest + guard clause.
+  function handleClickSolucion(e: Event) {
+    const target = e.target as HTMLElement;
+    const boton = target.closest<HTMLButtonElement>(".add-to-cart");
+    if (!boton) return;
+    handlersSolucion++;
+    const id = boton.dataset.id;
+    const info = target === boton ? "click directo" : `click en &lt;${target.tagName.toLowerCase()}&gt;, closest subió`;
+    anadirAlLog("solucion", `id: ${id} · handler OK · ${info}`, true);
+    pintarStats("solucion");
+  }
+
+  function markupProducto(id: number) {
+    return `
+      <article class="producto">
+        <span class="nombre">Elemento ${id}</span>
+        <button type="button" class="add-to-cart" data-id="${id}">
+          <span class="icono" aria-hidden="true">+</span>
+          <span class="texto">Al carrito</span>
+        </button>
+      </article>
+    `;
+  }
+
+  function renderInicial() {
+    if (!gridRoto || !gridSolucion) return;
+    const html = productos.map(markupProducto).join("");
+    gridRoto.innerHTML = html;
+    gridSolucion.innerHTML = html;
+    // Roto: registra listener por cada botón inicial (patrón del ejercicio).
+    gridRoto.querySelectorAll<HTMLButtonElement>(".add-to-cart").forEach((b) => {
+      b.addEventListener("click", handleClickRoto);
+      listenersRoto++;
+    });
+    // Solución: un solo listener en el contenedor padre.
+    gridSolucion.addEventListener("click", handleClickSolucion);
+    listenersSolucion++;
+    pintarStats("roto");
+    pintarStats("solucion");
+  }
+
+  function anadirProductos() {
+    if (!gridRoto || !gridSolucion) return;
+    const inicio = productos.length;
+    for (let i = 1; i <= POR_TANDA; i++) productos.push(inicio + i);
+    const nuevosHtml = productos.slice(inicio).map(markupProducto).join("");
+    // Ambos grids reciben el mismo HTML nuevo — la diferencia está en si
+    // sus botones acaban con listener o no.
+    gridRoto.insertAdjacentHTML("beforeend", nuevosHtml);
+    gridSolucion.insertAdjacentHTML("beforeend", nuevosHtml);
+    // Roto NO registra listeners en los nuevos: eso es exactamente la
+    // pathology del ejercicio. Solución no hace nada — el listener del
+    // contenedor recoge los clicks vía burbujeo.
+  }
+
+  function setModo(nuevo: Modo) {
+    if (nuevo === modoActivo) return;
+    modoActivo = nuevo;
+    panelResultados?.setAttribute("data-modo", nuevo);
+    modoButtons?.forEach((b) => {
+      const esActivo = b.dataset.modo === nuevo;
+      b.classList.toggle("activo", esActivo);
+      b.setAttribute("aria-selected", esActivo ? "true" : "false");
+    });
+  }
+
+  function resetear() {
+    // Quita listeners del listener único de solución (para no duplicar al re-registrar).
+    if (gridSolucion) gridSolucion.removeEventListener("click", handleClickSolucion);
+    productos = Array.from({ length: INICIALES }, (_, i) => i + 1);
+    listenersRoto = 0;
+    handlersRoto = 0;
+    listenersSolucion = 0;
+    handlersSolucion = 0;
+    logRoto.length = 0;
+    logSolucion.length = 0;
+    pintarLog("roto");
+    pintarLog("solucion");
+    renderInicial();
+  }
+
+  if (gridRoto && gridSolucion && controles) {
+    resetear();
+    controles.addEventListener("click", (e) => {
+      const target = e.target as Element;
+      const modoBtn = target?.closest<HTMLButtonElement>(".modo-selector button[data-modo]");
+      if (modoBtn?.dataset.modo) {
+        setModo(modoBtn.dataset.modo as Modo);
+        return;
+      }
+      const accionBtn = target?.closest<HTMLButtonElement>("button[data-accion]");
+      if (accionBtn?.dataset.accion === "reset") resetear();
+      else if (accionBtn?.dataset.accion === "anadir") anadirProductos();
+    });
+  }
+</script>
+
+<style>
+  /* Selector segmentado de modo (mismo patrón que las demos anteriores). */
+  .modo-selector {
+    display: inline-flex;
+    gap: var(--esp-xs);
+  }
+
+  .modo-selector .demo-boton.roto {
+    background: var(--fondo);
+    color: var(--error);
+    border-color: var(--error);
+  }
+
+  .modo-selector .demo-boton.roto.activo {
+    background: var(--error);
+    color: var(--papel);
+  }
+
+  .modo-selector .demo-boton.solucion {
+    background: var(--fondo);
+    color: var(--acento);
+    border-color: var(--acento);
+  }
+
+  .modo-selector .demo-boton.solucion.activo {
+    background: var(--acento);
+    color: var(--papel);
+  }
+
+  .modo-selector .demo-boton:not(.activo) {
+    opacity: 0.7;
+  }
+
+  /* Botón "Añadir productos": destacado en amarillo para diferenciarlo de reset. */
+  .demo-boton.anadir {
+    background: var(--destacado);
+    color: var(--tinta);
+    border-color: var(--tinta);
+  }
+
+  .demo-boton.anadir:hover {
+    transform: translateY(-1px);
+  }
+
+  /* Panel de resultados: solo una columna visible a la vez. */
+  .panel-resultados {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--esp-lg);
+  }
+
+  .panel-resultados[data-modo="roto"] .columna.solucion,
+  .panel-resultados[data-modo="solucion"] .columna.roto {
+    display: none;
+  }
+
+  .columna {
+    display: flex;
+    flex-direction: column;
+    gap: var(--esp-sm);
+    padding: var(--esp-md);
+    border: 2px solid var(--texto);
+    border-radius: var(--radio-md);
+    min-width: 0;
+  }
+
+  .columna.roto {
+    border-color: var(--error);
+  }
+
+  .columna.solucion {
+    border-color: var(--acento);
+  }
+
+  .cabecera-columna {
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-000);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding-bottom: var(--esp-xs);
+    border-bottom: 1px solid currentColor;
+  }
+
+  .columna.roto .cabecera-columna {
+    color: var(--error);
+  }
+
+  .columna.solucion .cabecera-columna {
+    color: var(--acento);
+  }
+
+  .stats-columna {
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-00);
+    color: color-mix(in srgb, var(--texto) 70%, transparent);
+  }
+
+  /* Log de clicks: entradas de éxito en verde, de error en rojo. */
+  .log-clicks {
+    display: flex;
+    flex-direction: column;
+    gap: var(--esp-2xs);
+    padding: var(--esp-xs);
+    border: 1px solid color-mix(in srgb, var(--texto) 20%, transparent);
+    border-radius: var(--radio-sm);
+    min-height: 6rem;
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-000);
+  }
+
+  .log-clicks :global(.log-vacio) {
+    color: color-mix(in srgb, var(--texto) 40%, transparent);
+    align-self: center;
+    padding: var(--esp-sm);
+  }
+
+  .log-clicks :global(.log-entry) {
+    padding: var(--esp-2xs) var(--esp-xs);
+    border-radius: var(--radio-sm);
+    border-left: 3px solid currentColor;
+  }
+
+  .log-clicks :global(.log-entry.ok) {
+    color: var(--exito);
+    background: color-mix(in srgb, var(--exito) 8%, transparent);
+  }
+
+  .log-clicks :global(.log-entry.err) {
+    color: var(--error);
+    background: color-mix(in srgb, var(--error) 8%, transparent);
+  }
+
+  /* Grid de productos y botones con hijo icono. */
+  .productos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: var(--esp-sm);
+    max-height: 20rem;
+    overflow-y: auto;
+    padding: var(--esp-xs);
+    border: 1px solid color-mix(in srgb, var(--texto) 20%, transparent);
+    border-radius: var(--radio-sm);
+  }
+
+  .productos-grid :global(.producto) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--esp-xs);
+    padding: var(--esp-sm);
+    background: var(--fondo);
+    border: 1px solid color-mix(in srgb, var(--texto) 15%, transparent);
+    border-radius: var(--radio-sm);
+  }
+
+  .productos-grid :global(.producto .nombre) {
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-00);
+  }
+
+  .productos-grid :global(.add-to-cart) {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--esp-xs);
+    padding: var(--esp-xs) var(--esp-sm);
+    background: var(--acento);
+    color: var(--papel);
+    border: none;
+    border-radius: var(--radio-sm);
+    cursor: pointer;
+    font-family: var(--fuente-display);
+    font-weight: 700;
+    font-size: var(--paso-00);
+    align-self: flex-start;
+  }
+
+  .productos-grid :global(.add-to-cart:hover) {
+    transform: translateY(-1px);
+  }
+
+  .productos-grid :global(.add-to-cart:active) {
+    transform: translateY(0);
+  }
+
+  .productos-grid :global(.add-to-cart .icono) {
+    display: inline-grid;
+    place-items: center;
+    width: 1.4em;
+    height: 1.4em;
+    background: var(--papel);
+    color: var(--acento);
+    border-radius: 50%;
+    font-weight: 700;
+    line-height: 1;
+  }
+</style>

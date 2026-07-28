@@ -70,11 +70,67 @@ import Nota from "../components/Nota.astro";
         <output id="render-lista-medida" aria-live="polite">
           <span class="medida-placeholder">— ms</span>
         </output>
+        <button type="button" data-accion="reset" class="boton reset"> Reset </button>
       </div>
 
       <div id="lista-render" class="lista" aria-label="Elementos pintados"></div>
 
       <a href="/ejercicios/render-lista" class="volver">Explicación completa del patrón →</a>
+    </section>
+
+    <section id="fetch-seguro" class="seccion" aria-labelledby="titulo-fetch-seguro">
+      <header class="cabecera">
+        <a href="/ejercicios/fetch-seguro" class="marca">
+          <span class="num">02</span>
+          <span class="etiqueta">fetch-seguro · Datos</span>
+        </a>
+        <h2 id="titulo-fetch-seguro">Datos que llegan incompletos</h2>
+        <p class="intro">
+          Cuatro escenarios distintos, un mismo <code>fetch</code> simulado. Con datos completos
+          las dos versiones renderizan bien; con datos irregulares o fallo de red, la versión
+          rota se rompe (a veces con un <code>TypeError</code> ruidoso, a veces pintando
+          silenciosamente el string <code>"undefined"</code> como si fuera un nombre). La
+          solución con <code>?.</code>, <code>??</code> y <code>.catch</code> protege los
+          tres casos.
+        </p>
+      </header>
+
+      <Nota tipo="info">
+        <p>
+          Los crashes de la versión rota los interceptamos aquí para poder pintarlos en la
+          tarjeta. En tu aplicación real serían un <code>Uncaught (in promise)</code> en la
+          consola: peor porque no se ven.
+        </p>
+      </Nota>
+
+      <div class="controles" role="group" aria-label="Comparativa de escenarios">
+        <label class="cantidad">
+          <span>Escenario</span>
+          <select id="fetch-seguro-escenario">
+            <option value="completo">Datos completos</option>
+            <option value="sin-profile" selected>Sin profile</option>
+            <option value="sin-name">Sin profile.name</option>
+            <option value="fallo">Fallo de red</option>
+          </select>
+        </label>
+        <button type="button" data-accion="roto" class="boton roto">
+          Sin ?. ni catch (código roto)
+        </button>
+        <button type="button" data-accion="solucion" class="boton solucion">
+          Con ?., ?? y catch
+        </button>
+        <output id="fetch-seguro-estado" aria-live="polite">
+          <span class="medida-placeholder">esperando</span>
+        </output>
+        <button type="button" data-accion="reset" class="boton reset"> Reset </button>
+      </div>
+
+      <div id="fetch-seguro-resultado" class="tarjeta-usuario" aria-live="polite">
+        <span class="etiqueta-tarjeta">Nombre de usuario</span>
+        <span class="nombre-tarjeta">—</span>
+      </div>
+
+      <a href="/ejercicios/fetch-seguro" class="volver">Explicación completa del patrón →</a>
     </section>
   </main>
 
@@ -119,10 +175,22 @@ import Nota from "../components/Nota.astro";
       return performance.now() - t0;
     }
 
+    function resetear() {
+      if (!container || !output) return;
+      container.textContent = "";
+      output.innerHTML = `<span class="medida-placeholder">— ms</span>`;
+      delete output.dataset.ultimo;
+    }
+
     if (controles && output && selector) {
       controles.addEventListener("click", (e) => {
         const boton = (e.target as Element)?.closest<HTMLButtonElement>("button[data-accion]");
         if (!boton) return;
+
+        if (boton.dataset.accion === "reset") {
+          resetear();
+          return;
+        }
 
         const cantidad = Number(selector.value);
         const ms =
@@ -133,6 +201,127 @@ import Nota from "../components/Nota.astro";
         const etiqueta = boton.dataset.accion === "roto" ? "sin fragment" : "con fragment";
         output.innerHTML = `<strong>${ms.toFixed(1)} ms</strong> · ${cantidad} elementos · ${etiqueta}`;
         output.dataset.ultimo = boton.dataset.accion;
+      });
+    }
+  </script>
+
+  <script>
+    // Demo comparativa del ejercicio 2 (fetch-seguro).
+    // fetchMock local: cuatro escenarios que fuerzan pathologies distintas.
+    // Versión rota: user.profile.name sin ?., sin ??, sin catch en la promesa.
+    // Versión solución: user?.profile?.name ?? "Anónimo" + .catch en la cadena.
+    type Escenario = "completo" | "sin-profile" | "sin-name" | "fallo";
+
+    const respuestas: Record<Exclude<Escenario, "fallo">, unknown> = {
+      completo: { profile: { name: "Ana Martínez" } },
+      "sin-profile": {},
+      "sin-name": { profile: {} },
+    };
+
+    async function fetchMock(escenario: Escenario) {
+      await new Promise((r) => setTimeout(r, 80));
+      if (escenario === "fallo") throw new TypeError("Failed to fetch");
+      return {
+        ok: true,
+        json: async () => respuestas[escenario as Exclude<Escenario, "fallo">],
+      };
+    }
+
+    const seccion2 = document.getElementById("fetch-seguro");
+    const escenarioSel = document.getElementById(
+      "fetch-seguro-escenario",
+    ) as HTMLSelectElement | null;
+    const resultado2 = document.getElementById("fetch-seguro-resultado");
+    const estado2 = document.getElementById("fetch-seguro-estado");
+    const controles2 = seccion2?.querySelector<HTMLDivElement>(".controles");
+    const etiquetaTarjeta = resultado2?.querySelector<HTMLElement>(".etiqueta-tarjeta");
+    const nombreTarjeta = resultado2?.querySelector<HTMLElement>(".nombre-tarjeta");
+
+    function pintarNombre(nombre: string) {
+      if (etiquetaTarjeta) etiquetaTarjeta.textContent = "Nombre de usuario";
+      if (nombreTarjeta) nombreTarjeta.textContent = nombre;
+      resultado2?.classList.remove("crash");
+    }
+
+    function pintarCrash(mensaje: string) {
+      if (etiquetaTarjeta) etiquetaTarjeta.textContent = "Crash sin capturar";
+      if (nombreTarjeta) nombreTarjeta.textContent = mensaje;
+      resultado2?.classList.add("crash");
+    }
+
+    function setEstado2(html: string) {
+      if (estado2) estado2.innerHTML = html;
+    }
+
+    function limpiarResultado() {
+      if (etiquetaTarjeta) etiquetaTarjeta.textContent = "Nombre de usuario";
+      if (nombreTarjeta) nombreTarjeta.textContent = "—";
+      resultado2?.classList.remove("crash");
+      setEstado2(`<span class="medida-placeholder">esperando</span>`);
+    }
+
+    // Versión rota (literal): mostrarUsuario sin ?. ni ??, y sin .catch en la cadena.
+    function mostrarUsuarioRoto(user: unknown) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      pintarNombre((user as any).profile.name);
+    }
+
+    async function ejecutarRoto(escenario: Escenario) {
+      limpiarResultado();
+      setEstado2(`<span class="medida-placeholder">Cargando (roto)…</span>`);
+      // En producción esta llamada sería un fetch + then + then sin catch.
+      // Aquí envolvemos en try/catch solo para poder rescatar el error y
+      // enseñarlo en la tarjeta; el mensaje que sale es el mismo que veria
+      // el navegador en la consola.
+      try {
+        const res = await fetchMock(escenario);
+        const user = await res.json();
+        mostrarUsuarioRoto(user);
+        setEstado2(`<strong>OK</strong> · sin errores`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        pintarCrash(msg);
+        setEstado2(`<strong>Sin capturar</strong> · en tu app sería Uncaught (in promise)`);
+      }
+    }
+
+    // Versión solución (literal): ?., ??, y .catch en la cadena.
+    function mostrarUsuarioSeguro(user: unknown) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      pintarNombre((user as any)?.profile?.name ?? "Anónimo");
+    }
+
+    async function ejecutarSolucion(escenario: Escenario) {
+      limpiarResultado();
+      setEstado2(`<span class="medida-placeholder">Cargando (solución)…</span>`);
+      try {
+        const res = await fetchMock(escenario);
+        const user = await res.json();
+        mostrarUsuarioSeguro(user);
+        setEstado2(`<strong>OK</strong> · con fallback`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        pintarNombre("Anónimo");
+        setEstado2(`<strong>Error capturado</strong> · ${msg}`);
+      }
+    }
+
+    if (controles2 && escenarioSel && resultado2 && estado2) {
+      controles2.addEventListener("click", (e) => {
+        const boton = (e.target as Element)?.closest<HTMLButtonElement>("button[data-accion]");
+        if (!boton) return;
+
+        if (boton.dataset.accion === "reset") {
+          limpiarResultado();
+          return;
+        }
+
+        const escenario = escenarioSel.value as Escenario;
+        if (boton.dataset.accion === "roto") {
+          ejecutarRoto(escenario);
+        } else {
+          ejecutarSolucion(escenario);
+        }
       });
     }
   </script>
@@ -309,6 +498,17 @@ import Nota from "../components/Nota.astro";
     transform: translateY(-1px);
   }
 
+  .boton.reset {
+    background: var(--fondo);
+    color: var(--texto);
+    border-color: var(--texto);
+  }
+
+  .boton.reset:hover {
+    background: var(--texto);
+    color: var(--fondo);
+  }
+
   output {
     font-family: var(--fuente-mono);
     font-size: var(--paso-00);
@@ -330,6 +530,53 @@ import Nota from "../components/Nota.astro";
     gap: var(--esp-xs);
     margin-bottom: var(--esp-xl);
     min-height: var(--esp-2xl);
+  }
+
+  .tarjeta-usuario {
+    display: flex;
+    flex-direction: column;
+    gap: var(--esp-xs);
+    padding: var(--esp-lg);
+    border: 2px solid var(--texto);
+    border-radius: var(--radio-md);
+    background: var(--fondo);
+    margin-bottom: var(--esp-xl);
+    min-height: 6rem;
+    transition:
+      border-color 150ms,
+      background 150ms;
+  }
+
+  .tarjeta-usuario.crash {
+    border-color: var(--error);
+    background: color-mix(in srgb, var(--error) 8%, transparent);
+  }
+
+  .etiqueta-tarjeta {
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-000);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: color-mix(in srgb, var(--texto) 60%, transparent);
+  }
+
+  .tarjeta-usuario.crash .etiqueta-tarjeta {
+    color: var(--error);
+  }
+
+  .nombre-tarjeta {
+    font-family: var(--fuente-display);
+    font-size: var(--paso-3);
+    font-weight: 700;
+    line-height: var(--lh-corto);
+    word-break: break-word;
+  }
+
+  .tarjeta-usuario.crash .nombre-tarjeta {
+    color: var(--error);
+    font-family: var(--fuente-mono);
+    font-size: var(--paso-00);
+    font-weight: 400;
   }
 
   .lista :global(.tarjeta-demo) {

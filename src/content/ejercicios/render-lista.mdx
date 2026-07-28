@@ -1,6 +1,5 @@
 ---
-ejercicio: "Ejercicio 1"
-orden: 1
+orden: 7
 titulo: "Insertar en el DOM dentro de un bucle"
 categoria: dom
 resumen: "Meter 500 nodos uno a uno provoca 500 recálculos. Cómo bajar a uno."
@@ -54,8 +53,7 @@ import DemoRenderLista from "../../components/demos/DemoRenderLista.astro";
 ## El problema
 
 Necesitas pintar una lista de 500 elementos. Escribes lo obvio: un bucle
-con `createElement` y `appendChild`. Funciona, pero se nota lento en móvil,
-y el navegador marca la tarea como problemática en el perfilador.
+con `createElement` y `appendChild`. Funciona, pero se nota lento en móvil.
 
 El motivo no es el bucle. Es que cada `appendChild` es una modificación al
 árbol del DOM, y el navegador tiene que estar preparado en cualquier

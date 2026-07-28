@@ -1,6 +1,6 @@
 ---
 titulo: "Trabajo repetido dentro del bucle"
-orden: 4
+orden: 8
 categoria: dom
 resumen: "Actualizar un contador en cada iteración cuando el total ya se sabe de golpe."
 conceptos: ["debounce", "batching", "trabajo dentro del bucle"]
@@ -126,13 +126,13 @@ input.addEventListener("input", (e) => {
 
 El cambio de fondo es sacar el contador fuera del bucle. Antes se
 recalculaba en cada iteración; ahora se calcula una sola vez porque
-`filtrados.length` ya lo sabe. Es la misma idea que el ejercicio 1:
-todo el trabajo repetido que se puede hacer una sola vez debe hacerse
-una sola vez.
+`filtrados.length` ya lo sabe. Es la misma idea que el ejercicio 7
+(insertar en el DOM dentro de un bucle): todo el trabajo repetido que
+se puede hacer una sola vez debe hacerse una sola vez.
 
-El resto son los patrones del ejercicio anterior aplicados: debounce
-para no filtrar en cada tecla, `map(...).join("")` para no reparsear
-el `tbody` en cada iteración.
+El resto son patrones ya conocidos: debounce (ejercicio 2) para no
+filtrar en cada tecla, y `map(...).join("")` en lugar de `innerHTML +=`
+para no reparsear el `tbody` en cada iteración.
 
 </Solucion>
 

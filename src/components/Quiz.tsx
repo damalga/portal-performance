@@ -48,17 +48,12 @@ export default function Quiz({ preguntas }: Props) {
               <p class="enunciado">
                 <span class="numero">{i + 1}.</span> {p.pregunta}
               </p>
-              <ul class="opciones" role="radiogroup" aria-label={p.pregunta}>
+              <ul class="opciones" aria-label={p.pregunta}>
                 {p.opciones.map((op, j) => {
                   const elegida = respuestas[i] === j;
                   const correcta = enviado && j === p.correcta;
                   const fallo = enviado && elegida && j !== p.correcta;
-                  const clase = [
-                    "opcion",
-                    elegida && "elegida",
-                    correcta && "correcta",
-                    fallo && "fallo",
-                  ]
+                  const clase = ["opcion", elegida && "elegida", correcta && "correcta", fallo && "fallo"]
                     .filter(Boolean)
                     .join(" ");
                   return (
@@ -215,6 +210,7 @@ const estilos = `
     border-radius: var(--radio-md);
     cursor: pointer;
     transition: transform 100ms;
+    float: right;
   }
 
   .quiz .boton:hover:not(:disabled) {

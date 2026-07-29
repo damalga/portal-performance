@@ -34,7 +34,7 @@ quiz:
       - "Porque `forEach` no permite realizar dos operaciones distintas dentro del mismo callback sin romper la iteración."
       - "Porque el hilo principal no puede leer y escribir al DOM en la misma vuelta del event loop sin generar contención."
       - "Porque `document.createElement` bloquea las lecturas de layout siguientes hasta que el nodo se inserta en el árbol."
-      - "Porque agrupar todas las lecturas primero permite al navegador reflowar una sola vez para servirlas, y luego las escrituras se aplican sin obligar a más medidas."
+      - "Porque agrupar todas las lecturas primero permite al navegador hacer reflow una sola vez para servirlas, y luego las escrituras se aplican sin obligar a más medidas."
       - "Porque las escrituras al DOM son asíncronas por defecto y no se pueden mezclar con lecturas síncronas de layout."
     correcta: 3
   - pregunta: "En un bucle con 30 elementos que lee `scrollHeight` y crea un botón cada vez, ¿cuántos reflows fuerza en el peor caso?"
